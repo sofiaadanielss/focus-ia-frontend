@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 
 @Component({
+  
   selector: 'app-profile',
   standalone: true,
   imports: [CommonModule, FormsModule],
