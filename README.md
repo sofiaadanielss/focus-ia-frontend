@@ -1,5 +1,3 @@
 # FocusAi
 
-Registrar cuenta
-Pantalla Login 
-Editar perfil de usuario
+Registrar cuenta, Pantalla Login, Editar perfil de usuario
