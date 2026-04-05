@@ -4,7 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink, Router } from '@angular/router';
 
 @Component({
-  
   selector: 'app-login',
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
