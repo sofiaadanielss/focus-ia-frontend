@@ -1,0 +1,71 @@
+<div class="register-page">
+
+  <div class="form-container">
+
+    <h1 class="brand">Focus AI</h1>
+    <h2 class="subtitle">Crear Cuenta</h2>
+
+    <form (ngSubmit)="onSubmit()" novalidate class="register-form">
+
+      <div class="field">
+        <label>Nombre Completo <span class="required">*</span></label>
+        <input
+          [(ngModel)]="name"
+          name="name"
+          type="text"
+          [class.input-error]="nameError"
+          (blur)="validateName()"
+        />
+        <span class="error-msg" *ngIf="nameError">{{ nameError }}</span>
+      </div>
+
+      <div class="field">
+        <label>Correo Electrónico <span class="required">*</span></label>
+        <input
+          [(ngModel)]="email"
+          name="email"
+          type="text"
+          [class.input-error]="emailError"
+          (blur)="validateEmail()"
+        />
+        <span class="error-msg" *ngIf="emailError">{{ emailError }}</span>
+      </div>
+
+      <div class="field">
+        <label>Contraseña <span class="required">*</span></label>
+        <input
+          [(ngModel)]="password"
+          name="password"
+          type="password"
+          [class.input-error]="passwordError"
+          (blur)="validatePassword()"
+        />
+        <span class="hint-msg" [class.error-msg]="passwordError">
+          {{ passwordError || 'Mínimo 8 caracteres' }}
+        </span>
+      </div>
+
+      <button
+        type="submit"
+        class="btn-submit"
+        [disabled]="isSubmitDisabled()"
+        [class.btn-disabled]="isSubmitDisabled()"
+      >
+        {{ loading ? 'Registrando...' : 'Registrarse' }}
+      </button>
+
+      <p class="server-error" *ngIf="serverError">{{ serverError }}</p>
+    </form>
+
+    
+    <div class="success-overlay" *ngIf="showModal">
+      <p class="success-msg">Cuenta creada exitosamente</p>
+      <button class="btn-submit" (click)="goToLogin()">OK</button>
+    </div>
+
+    <p class="login-link">
+      Tienes cuenta? <a routerLink="/login">Iniciar Sesión</a>
+    </p>
+
+  </div>
+</div>
