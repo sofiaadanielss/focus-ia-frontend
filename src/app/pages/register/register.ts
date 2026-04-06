@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink, Router } from '@angular/router';
+import { AuthService } from '../../core/auth/auth.service';
 
 @Component({
   selector: 'app-register',
@@ -21,18 +22,10 @@ export class Register {
   loading = false;
   showModal = false;
 
-  constructor(private router: Router) {}
+  constructor(private router: Router, private authService: AuthService) {}
 
   isSubmitDisabled(): boolean {
-    return (
-      !this.name ||
-      !this.email ||
-      !this.password ||
-      !!this.nameError ||
-      !!this.emailError ||
-      !!this.passwordError ||
-      this.loading
-    );
+    return !this.name || !this.email || !this.password || !!this.nameError || !!this.emailError || !!this.passwordError || this.loading;
   }
 
   validateName() {
@@ -60,46 +53,34 @@ export class Register {
     }
   }
 
-  async onSubmit() {
+  onSubmit() {
     this.validateName();
     this.validateEmail();
     this.validatePassword();
-
     if (this.nameError || this.emailError || this.passwordError) return;
 
     this.loading = true;
     this.serverError = '';
 
-    try {
-      const res = await fetch('http://localhost:8000/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: this.name,
-          email: this.email,
-          password: this.password
-        })
-      });
-
-      const result = await res.json();
-
-      if (res.ok) {
+    this.authService.register({ name: this.name, email: this.email, password: this.password }).subscribe({
+      next: () => {
         this.showModal = true;
-      } else {
-        const detail = result.detail?.toLowerCase() ?? '';
+      },
+      error: (err) => {
+        const detail = (err.error?.detail ?? '').toLowerCase();
         if (detail.includes('email')) {
           this.emailError = 'Este correo ya está registrado';
         } else if (detail.includes('password')) {
           this.passwordError = 'Mínimo 8 caracteres';
         } else {
-          this.serverError = result.detail || 'Error al registrar';
+          this.serverError = err.error?.detail || 'Error al registrar';
         }
+        this.loading = false;
+      },
+      complete: () => {
+        this.loading = false;
       }
-    } catch (err) {
-      this.serverError = 'Error de conexión con el servidor. ¿Está corriendo el backend?';
-    } finally {
-      this.loading = false;
-    }
+    });
   }
 
   goToLogin() {

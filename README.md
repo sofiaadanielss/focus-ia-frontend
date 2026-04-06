@@ -1,5 +1,5 @@
 # FocusAi
 
-Registrar cuenta
+Registrar cuenta,
 Pantalla Login 
 Editar perfil de usuario

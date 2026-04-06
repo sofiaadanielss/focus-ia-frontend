@@ -12,8 +12,11 @@ import { Router } from '@angular/router';
 })
 export class Profile implements OnInit {
   currentName = '';
+
   name = '';
   email = '';
+
+  
   nameError = '';
   emailError = '';
   serverError = '';
@@ -22,11 +25,35 @@ export class Profile implements OnInit {
 
   constructor(private router: Router) {}
 
-  // mock prueba
   ngOnInit() {
-    this.name = 'Margarita Lopez';
-    this.email = 'prueba@correo.com';
-    this.currentName = this.name;
+    
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      this.router.navigate(['/login']);
+      return;
+    }
+    this.loadProfile(token);
+  }
+
+  private async loadProfile(token: string) {
+    try {
+      const res = await fetch('http://localhost:8000/users/me', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (res.status === 401) {
+        localStorage.removeItem('access_token');
+        this.router.navigate(['/login']);
+        return;
+      }
+
+      const user = await res.json();
+      this.name = user.name ?? '';
+      this.email = user.email ?? '';
+      this.currentName = this.name;
+    } catch {
+      this.serverError = 'No se pudo cargar el perfil. ¿Está corriendo el backend?';
+    }
   }
 
   isSubmitDisabled(): boolean {
@@ -40,6 +67,7 @@ export class Profile implements OnInit {
   }
 
   validateName() {
+    
     this.nameError = !this.name.trim() ? 'El nombre no puede estar vacío' : '';
   }
 
@@ -63,14 +91,47 @@ export class Profile implements OnInit {
     this.validateEmail();
     if (this.nameError || this.emailError) return;
 
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      this.router.navigate(['/login']);
+      return;
+    }
+
     this.loading = true;
     this.serverError = '';
     this.successMessage = '';
 
-    await new Promise(resolve => setTimeout(resolve, 600));
-    this.currentName = this.name;
-    this.successMessage = 'Datos guardados con éxito!';
-    setTimeout(() => (this.successMessage = ''), 4000);
-    this.loading = false;
+    try {
+      const res = await fetch('http://localhost:8000/users/me', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: this.name.trim(),
+          email: this.email.trim()
+        })
+      });
+
+      const result = await res.json();
+
+      if (res.ok) {
+        this.currentName = this.name;
+        this.successMessage = 'Datos guardados con éxito!';
+        setTimeout(() => (this.successMessage = ''), 4000);
+      } else {
+        const detail = result.detail?.toLowerCase() ?? '';
+        if (detail.includes('email') || detail.includes('correo')) {
+          this.emailError = 'Este correo ya está registrado por otro usuario';
+        } else {
+          this.serverError = result.detail || 'Error al guardar los cambios';
+        }
+      }
+    } catch {
+      this.serverError = 'Error de conexión con el servidor. ¿Está corriendo el backend?';
+    } finally {
+      this.loading = false;
+    }
   }
 }
