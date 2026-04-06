@@ -2,9 +2,9 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-
+import { AuthService } from '../../core/auth/auth.service';
+ 
 @Component({
-  
   selector: 'app-profile',
   standalone: true,
   imports: [CommonModule, FormsModule],
@@ -13,50 +13,43 @@ import { Router } from '@angular/router';
 })
 export class Profile implements OnInit {
   currentName = '';
-
   name = '';
   email = '';
-
-  
+ 
   nameError = '';
   emailError = '';
   serverError = '';
   successMessage = '';
   loading = false;
-
-  constructor(private router: Router) {}
-
+ 
+  constructor(private router: Router, private authService: AuthService) {}
+ 
   ngOnInit() {
-    
-    const token = localStorage.getItem('access_token');
-    if (!token) {
+    if (!this.authService.isLoggedIn()) {
       this.router.navigate(['/login']);
       return;
     }
-    this.loadProfile(token);
+    this.loadProfile();
   }
-
-  private async loadProfile(token: string) {
-    try {
-      const res = await fetch('http://localhost:8000/users/me', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      if (res.status === 401) {
-        localStorage.removeItem('access_token');
-        this.router.navigate(['/login']);
-        return;
+ 
+  private loadProfile() {
+    this.authService.getProfile().subscribe({
+      next: (user) => {
+        this.name = user.name ?? '';
+        this.email = user.email ?? '';
+        this.currentName = this.name;
+      },
+      error: (err) => {
+        if (err.status === 401) {
+          this.authService.logout();
+          this.router.navigate(['/login']);
+        } else {
+          this.serverError = 'No se pudo cargar el perfil.';
+        }
       }
-
-      const user = await res.json();
-      this.name = user.name ?? '';
-      this.email = user.email ?? '';
-      this.currentName = this.name;
-    } catch {
-      this.serverError = 'No se pudo cargar el perfil. ¿Está corriendo el backend?';
-    }
+    });
   }
-
+ 
   isSubmitDisabled(): boolean {
     return (
       !this.name ||
@@ -66,12 +59,11 @@ export class Profile implements OnInit {
       this.loading
     );
   }
-
+ 
   validateName() {
-    
     this.nameError = !this.name.trim() ? 'El nombre no puede estar vacío' : '';
   }
-
+ 
   validateEmail() {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!this.email.trim()) {
@@ -82,57 +74,51 @@ export class Profile implements OnInit {
       this.emailError = '';
     }
   }
-
+ 
   clearSuccess() {
     this.successMessage = '';
   }
-
-  async onSubmit() {
+ 
+  onSubmit() {
     this.validateName();
     this.validateEmail();
     if (this.nameError || this.emailError) return;
-
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-      this.router.navigate(['/login']);
-      return;
-    }
-
+ 
     this.loading = true;
     this.serverError = '';
     this.successMessage = '';
-
-    try {
-      const res = await fetch('http://localhost:8000/users/me', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          name: this.name.trim(),
-          email: this.email.trim()
-        })
-      });
-
-      const result = await res.json();
-
-      if (res.ok) {
-        this.currentName = this.name;
-        this.successMessage = 'Datos guardados con éxito!';
+ 
+    this.authService.updateProfile({
+      name: this.name.trim(),
+      email: this.email.trim()
+    }).subscribe({
+      next: (user) => {
+        this.currentName = user.name;
+        this.name = user.name;
+        this.email = user.email;
+        this.successMessage = 'Completado';
         setTimeout(() => (this.successMessage = ''), 4000);
-      } else {
-        const detail = result.detail?.toLowerCase() ?? '';
+      },
+      error: (err) => {
+        const detail = (err.error?.detail ?? '').toLowerCase();
         if (detail.includes('email') || detail.includes('correo')) {
           this.emailError = 'Este correo ya está registrado por otro usuario';
+        } else if (err.status === 401) {
+          this.authService.logout();
+          this.router.navigate(['/login']);
         } else {
-          this.serverError = result.detail || 'Error al guardar los cambios';
+          this.serverError = err.error?.detail || 'Error al guardar los cambios';
         }
+        this.loading = false;
+      },
+      complete: () => {
+        this.loading = false;
       }
-    } catch {
-      this.serverError = 'Error de conexión con el servidor. ¿Está corriendo el backend?';
-    } finally {
-      this.loading = false;
-    }
+    });
+  }
+ 
+  onLogout() {
+    this.authService.logout();
+    this.router.navigate(['/login']);
   }
 }
