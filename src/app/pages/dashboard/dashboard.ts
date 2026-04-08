@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { FocusService, Session } from '../../core/services/focus.service'
+import { FocusService, Session } from '../../core/services/focus.service';
 import { AuthService } from '../../core/auth/auth.service';
 
 @Component({
@@ -33,7 +33,9 @@ export class Dashboard implements OnInit, OnDestroy {
           this.startTimer(session.start_time);
         }
       },
-      error: () => {} 
+      error: () => {
+        // Manejar error silenciosamente
+      }
     });
   }
 
@@ -42,13 +44,17 @@ export class Dashboard implements OnInit, OnDestroy {
     this.loading = true;
     this.error = '';
 
-    this.focusService.startSession().subscribe({
+    const duration = this.focusService.getDuracionSesion();
+    
+    // Usar el método que acepta duración
+    this.focusService.startSessionWithDuration(duration).subscribe({
       next: (session) => {
         this.activeSession = session;
         this.startTimer(session.start_time);
         this.loading = false;
       },
-      error: () => {
+      error: (err) => {
+        console.error('Error starting session:', err);
         this.error = 'No se pudo iniciar la sesión. Inténtalo de nuevo.';
         this.loading = false;
       }
@@ -67,7 +73,8 @@ export class Dashboard implements OnInit, OnDestroy {
         this.timerDisplay = '00:00:00';
         this.loading = false;
       },
-      error: () => {
+      error: (err) => {
+        console.error('Error ending session:', err);
         this.error = 'No se pudo finalizar la sesión. Inténtalo de nuevo.';
         this.loading = false;
       }
@@ -82,8 +89,7 @@ export class Dashboard implements OnInit, OnDestroy {
       const h = Math.floor(elapsed / 3600);
       const m = Math.floor((elapsed % 3600) / 60);
       const s = elapsed % 60;
-      this.timerDisplay =
-        `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+      this.timerDisplay = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
     }, 1000);
   }
 

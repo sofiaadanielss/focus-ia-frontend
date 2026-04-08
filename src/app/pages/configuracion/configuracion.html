@@ -1,0 +1,58 @@
+<div class="main-container">
+  <div class="card">
+    <div class="avatar-container">
+      <div class="avatar-circle">
+        <span class="user-icon">👤</span>
+      </div>
+    </div>
+
+    <h1>Configuración</h1>
+
+    <div class="section">
+      <p class="section-title">Establece nivel de concentración</p>
+      <div class="button-group">
+        @for (modo of modos; track modo.id) {
+          <button 
+            (click)="seleccionarModo(modo.id)"
+            [class.active]="modoSeleccionado === modo.id"
+            class="mode-button">
+            {{ modo.texto }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="section">
+      <p class="section-title">Establece la duración de la sesión</p>
+      <div class="slider-container">
+        <input 
+          type="range" 
+          min="15" 
+          max="120" 
+          [value]="duracion"
+          (input)="duracion = $any($event.target).value"
+          class="slider">
+        <div class="slider-labels">
+          <span>15 min</span>
+          <span class="current-value">{{ duracion }} min</span>
+          <span>120 min</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <button 
+        (click)="guardar()" 
+        [disabled]="!modoSeleccionado"
+        class="save-button">
+        Guardar Preferencias
+      </button>
+      
+      @if (mensajeConfirmacion) {
+        <p class="success-msg">
+          ✅ Completado
+        </p>
+      }
+    </div>
+  </div>
+</div>
