@@ -6,7 +6,6 @@
   align-items: center;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
-
 .card {
   background: white;
   padding: 3rem;
@@ -17,13 +16,11 @@
   position: relative;
   text-align: center;
 }
-
 .avatar-container {
   position: absolute;
   top: 20px;
   right: 30px;
 }
-
 .avatar-circle {
   width: 60px;
   height: 60px;
@@ -33,19 +30,16 @@
   align-items: center;
   justify-content: center;
 }
-
 h1 {
   color: #312e81;
   font-size: 2.5rem;
   margin-bottom: 2rem;
 }
-
 .section-title {
   color: #4338ca;
   font-weight: 600;
   margin-bottom: 1.5rem;
 }
-
 .button-group {
   display: flex;
   gap: 15px;
@@ -53,7 +47,6 @@ h1 {
   flex-wrap: wrap;
   margin-bottom: 3rem;
 }
-
 .mode-button {
   background-color: #a78bfa;
   color: white;
@@ -64,23 +57,19 @@ h1 {
   font-size: 1rem;
   transition: all 0.3s ease;
 }
-
 .mode-button.active {
   background-color: #7c3aed;
   transform: scale(1.05);
   box-shadow: 0 0 15px rgba(124, 58, 237, 0.4);
 }
-
 .slider-container {
   padding: 0 40px;
 }
-
 .slider {
   width: 100%;
   accent-color: #7c3aed;
   cursor: pointer;
 }
-
 .slider-labels {
   display: flex;
   justify-content: space-between;
@@ -88,12 +77,10 @@ h1 {
   font-size: 0.9rem;
   margin-top: 10px;
 }
-
 .current-value {
   color: #7c3aed;
   font-weight: bold;
 }
-
 .save-button {
   margin-top: 2rem;
   background-color: #312e81;
@@ -104,12 +91,10 @@ h1 {
   cursor: pointer;
   font-weight: bold;
 }
-
 .save-button:disabled {
   background-color: #9ca3af;
   cursor: not-allowed;
 }
-
 .success-msg {
   color: #10b981;
   font-weight: bold;

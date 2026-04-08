@@ -1,6 +1,5 @@
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
-import { FocusService, Preference } from '../../core/services/focus.service';
 
 @Component({
   selector: 'app-configuracion',
@@ -9,7 +8,7 @@ import { FocusService, Preference } from '../../core/services/focus.service';
   styleUrls: ['./configuracion.css']
 })
 export class ConfiguracionComponent {
-  duracion: number = 25;
+  duracion: number = 45;
   modoSeleccionado: string = '';
   mensajeConfirmacion: boolean = false;
   guardando: boolean = false;
@@ -20,28 +19,19 @@ export class ConfiguracionComponent {
     { id: 'absoluta', texto: 'Concentración absoluta' }
   ];
 
-  constructor(
-    private focusService: FocusService,
-    private router: Router) {
+  constructor(private router: Router) {
     this.cargarPreferencias();
   }
 
   cargarPreferencias() {
-    
-    this.focusService.getPreferences().subscribe({
-      next: (prefs) => {
-        this.modoSeleccionado = prefs.mode;
-        this.duracion = prefs.duration;
-      },
-      error: () => {
-        
-        const localPrefs = this.focusService.getPreferenciasLocal();
-        if (localPrefs) {
-          this.modoSeleccionado = localPrefs.mode;
-          this.duracion = localPrefs.duration;
-        }
-      }
-    });
+    const raw = localStorage.getItem('focus_preferences');
+    if (raw) {
+      try {
+        const prefs = JSON.parse(raw);
+        this.modoSeleccionado = prefs.mode || '';
+        this.duracion = Number(prefs.duration) || 45;
+      } catch {}
+    }
   }
 
   seleccionarModo(id: string) {
@@ -50,22 +40,20 @@ export class ConfiguracionComponent {
 
   guardar() {
     if (!this.modoSeleccionado || this.guardando) return;
-    
+
     this.guardando = true;
-    
-    const preferencias: Preference = {
+
+    const preferencias = {
       mode: this.modoSeleccionado,
-      duration: this.duracion
+      duration: Number(this.duracion)
     };
 
-    this.focusService.guardarPreferencias(preferencias).subscribe({
-      next: () => {
-        this.router.navigate(['/dashboard']);
-      },
-      error: (err) => {
-        console.error('Error:', err);
-        this.router.navigate(['/dashboard']);  
-      }
-    });
+    localStorage.setItem('focus_preferences', JSON.stringify(preferencias));
+
+    this.mensajeConfirmacion = true;
+
+    setTimeout(() => {
+      this.router.navigate(['/dashboard']);
+    }, 600);
   }
 }

@@ -11,6 +11,6 @@ export const routes: Routes = [
   { path: 'register', component: Register },
   { path: 'profile', component: Profile },
   { path: 'dashboard', component: Dashboard },
-  { path: 'preferences', component: ConfiguracionComponent },
+  { path: 'configuracion', component: ConfiguracionComponent },
 ];
 
