@@ -53,7 +53,7 @@ export class Login {
     this.authService.login(this.email, this.password).subscribe({
       next: () => {
         this.successMessage = 'Inicio de sesión exitoso';
-        setTimeout(() => this.router.navigate(['/profile']), 1500);
+        this.router.navigate(['/dashboard']);
       },
       error: (err) => {
         this.serverError = err.error?.detail || 'Correo o contraseña incorrectos';
