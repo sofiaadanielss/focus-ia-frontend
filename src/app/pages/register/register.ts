@@ -1,56 +1,66 @@
-import { Component } from '@angular/core';
+import { Component, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink, Router } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
-
+import { LucideAngularModule, Eye, EyeOff } from 'lucide-angular';
 
 @Component({
   selector: 'app-register',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, LucideAngularModule],
   templateUrl: './register.html',
   styleUrl: './register.css'
 })
 export class Register {
-  name = '';
-  email = '';
-  password = '';
-  nameError = '';
-  emailError = '';
-  passwordError = '';
-  serverError = '';
-  loading = false;
-  showModal = false;
+  readonly Eye = Eye;
+  readonly EyeOff = EyeOff;
+
+  name = signal('');
+  email = signal('');
+  password = signal('');
+  nameError = signal('');
+  emailError = signal('');
+  passwordError = signal('');
+  serverError = signal('');
+  loading = signal(false);
+  showModal = signal(false);
+  showPassword = signal(false);
 
   constructor(private router: Router, private authService: AuthService) {}
 
-  isSubmitDisabled(): boolean {
-    return !this.name || !this.email || !this.password || !!this.nameError || !!this.emailError || !!this.passwordError || this.loading;
+  togglePassword() {
+    this.showPassword.update(v => !v);
   }
 
+  isSubmitDisabled = computed(() => {
+    return !this.name() || !this.email() || !this.password()
+      || !!this.nameError() || !!this.emailError() || !!this.passwordError()
+      || this.loading();
+  });
+
   validateName() {
-    this.nameError = !this.name ? 'El nombre es obligatorio' : '';
+    this.nameError.set(!this.name() ? 'El nombre es obligatorio' : '');
   }
 
   validateEmail() {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!this.email) {
-      this.emailError = 'El correo electrónico es obligatorio';
-    } else if (!emailRegex.test(this.email)) {
-      this.emailError = 'Formato de correo inválido';
+    if (!this.email()) {
+      this.emailError.set('El correo electrónico es obligatorio');
+    } else if (!emailRegex.test(this.email())) {
+      this.emailError.set('Formato de correo inválido');
     } else {
-      this.emailError = '';
+      this.emailError.set('');
     }
   }
 
   validatePassword() {
-    if (!this.password) {
-      this.passwordError = 'La contraseña es obligatoria';
-    } else if (this.password.length < 8) {
-      this.passwordError = 'Mínimo 8 caracteres';
+    if (!this.password()) {
+      this.passwordError.set('La contraseña es obligatoria');
+    } else if (this.password().length < 8) {
+      this.passwordError.set('Mínimo 8 caracteres');
     } else {
-      this.passwordError = '';
+      this.passwordError.set('');
     }
   }
 
@@ -58,34 +68,34 @@ export class Register {
     this.validateName();
     this.validateEmail();
     this.validatePassword();
-    if (this.nameError || this.emailError || this.passwordError) return;
+    if (this.nameError() || this.emailError() || this.passwordError()) return;
 
-    this.loading = true;
-    this.serverError = '';
+    this.loading.set(true);
+    this.serverError.set('');
 
-    this.authService.register({ name: this.name, email: this.email, password: this.password }).subscribe({
+    this.authService.register({ name: this.name(), email: this.email(), password: this.password() }).subscribe({
       next: () => {
-        this.showModal = true;
+        this.showModal.set(true);
       },
       error: (err) => {
         const detail = (err.error?.detail ?? '').toLowerCase();
         if (detail.includes('email')) {
-          this.emailError = 'Este correo ya está registrado';
+          this.emailError.set('Este correo ya está registrado');
         } else if (detail.includes('password')) {
-          this.passwordError = 'Mínimo 8 caracteres';
+          this.passwordError.set('Mínimo 8 caracteres');
         } else {
-          this.serverError = err.error?.detail || 'Error al registrar';
+          this.serverError.set(err.error?.detail || 'Error al registrar');
         }
-        this.loading = false;
+        this.loading.set(false);
       },
       complete: () => {
-        this.loading = false;
+        this.loading.set(false);
       }
     });
   }
 
   goToLogin() {
-    this.showModal = false;
+    this.showModal.set(false);
     this.router.navigate(['/login']);
   }
 }

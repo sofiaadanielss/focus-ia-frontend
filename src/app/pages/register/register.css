@@ -6,11 +6,10 @@
   padding: 0;
 }
 
-
 .register-page {
   width: 100vw;
   height: 100vh;
-  background-color: #f3f4f6; 
+  background-color: #f3f4f6;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -27,7 +26,6 @@
   position: relative;
   padding: 0 32px;
 }
-
 
 .brand {
   font-size: 2.4rem;
@@ -101,9 +99,29 @@
   margin-top: 4px;
 }
 
+/* Toggle contraseña */
+.password-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.toggle-eye {
+  position: absolute;
+  right: 0.6rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: #6b7280;
+}
+
 .btn-submit {
   width: 100%;
-  background-color: #a78bfa; 
+  background-color: #a78bfa;
   color: #fff;
   border: none;
   border-radius: 999px;
@@ -127,13 +145,29 @@
   opacity: 1;
 }
 
+/* Error servidor con shake */
 .server-error {
-  font-size: 0.72rem;
-  color: #ef4444;
+  font-size: 0.75rem;
+  color: #b91c1c;
   text-align: center;
-  margin-top: 10px;
+  margin-top: 15px;
+  background-color: #fee2e2;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #fecaca;
+  font-weight: 600;
 }
 
+.animate-shake {
+  animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+@keyframes shake {
+  10%, 90% { transform: translate3d(-1px, 0, 0); }
+  20%, 80% { transform: translate3d(2px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+  40%, 60% { transform: translate3d(4px, 0, 0); }
+}
 
 .success-overlay {
   position: absolute;

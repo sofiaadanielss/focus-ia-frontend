@@ -1,8 +1,6 @@
 <div class="register-page">
-
   <div class="form-container">
 
-    
     <h1 class="brand">Focus AI</h1>
     <h2 class="subtitle">Crear Cuenta</h2>
 
@@ -11,38 +9,54 @@
       <div class="field">
         <label>Nombre Completo <span class="required">*</span></label>
         <input
-          [(ngModel)]="name"
+          [ngModel]="name()"
+          (ngModelChange)="name.set($event)"
           name="name"
           type="text"
-          [class.input-error]="nameError"
+          [class.input-error]="nameError()"
           (blur)="validateName()"
         />
-        <span class="error-msg" *ngIf="nameError">{{ nameError }}</span>
+        @if (nameError()) {
+          <span class="error-msg">{{ nameError() }}</span>
+        }
       </div>
 
       <div class="field">
         <label>Correo Electrónico <span class="required">*</span></label>
         <input
-          [(ngModel)]="email"
+          [ngModel]="email()"
+          (ngModelChange)="email.set($event)"
           name="email"
           type="text"
-          [class.input-error]="emailError"
+          [class.input-error]="emailError()"
           (blur)="validateEmail()"
         />
-        <span class="error-msg" *ngIf="emailError">{{ emailError }}</span>
+        @if (emailError()) {
+          <span class="error-msg">{{ emailError() }}</span>
+        }
       </div>
 
       <div class="field">
         <label>Contraseña <span class="required">*</span></label>
-        <input
-          [(ngModel)]="password"
-          name="password"
-          type="password"
-          [class.input-error]="passwordError"
-          (blur)="validatePassword()"
-        />
-        <span class="hint-msg" [class.error-msg]="passwordError">
-          {{ passwordError || 'Mínimo 8 caracteres' }}
+        <div class="password-wrapper">
+          <input
+            [ngModel]="password()"
+            (ngModelChange)="password.set($event)"
+            name="password"
+            [type]="showPassword() ? 'text' : 'password'"
+            [class.input-error]="passwordError()"
+            (blur)="validatePassword()"
+          />
+          <button type="button" class="toggle-eye" (click)="togglePassword()">
+            <lucide-icon
+              [img]="showPassword() ? EyeOff : Eye"
+              size="16"
+              color="#6b7280"
+            ></lucide-icon>
+          </button>
+        </div>
+        <span class="hint-msg" [class.error-msg]="passwordError()">
+          {{ passwordError() || 'Mínimo 8 caracteres' }}
         </span>
       </div>
 
@@ -52,17 +66,21 @@
         [disabled]="isSubmitDisabled()"
         [class.btn-disabled]="isSubmitDisabled()"
       >
-        {{ loading ? 'Registrando...' : 'Registrarse' }}
+        {{ loading() ? 'Registrando...' : 'Registrarse' }}
       </button>
 
-      <p class="server-error" *ngIf="serverError">{{ serverError }}</p>
+      @if (serverError()) {
+        <p class="server-error animate-shake">{{ serverError() }}</p>
+      }
+
     </form>
 
-    
-    <div class="success-overlay" *ngIf="showModal">
-      <p class="success-msg">Cuenta creada exitosamente</p>
-      <button class="btn-submit" (click)="goToLogin()">OK</button>
-    </div>
+    @if (showModal()) {
+      <div class="success-overlay">
+        <p class="success-msg">Cuenta creada exitosamente</p>
+        <button class="btn-submit" (click)="goToLogin()">OK</button>
+      </div>
+    }
 
     <p class="login-link">
       Tienes cuenta? <a routerLink="/login">Iniciar Sesión</a>
