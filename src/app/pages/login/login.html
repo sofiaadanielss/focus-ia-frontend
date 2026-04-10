@@ -7,9 +7,9 @@
 
   <div class="form-panel">
 
-  <div class="bulb-icon">
-    <img src="/logo.png" class="logo-form">
-  </div>
+    <div class="bulb-icon">
+      <img src="/logo.png" class="logo-form">
+    </div>
 
     <h1 class="form-title">Inicio de Sesión</h1>
 
@@ -18,25 +18,40 @@
       <div class="field">
         <label>Correo Electrónico</label>
         <input
-          [(ngModel)]="email"
+          [ngModel]="email()"
+          (ngModelChange)="email.set($event)"
           name="email"
           type="text"
-          [class.input-error]="emailError"
+          [class.input-error]="emailError()"
           (blur)="validateEmail()"
         />
-        <span class="error-msg" *ngIf="emailError">{{ emailError }}</span>
+        @if (emailError()) {
+          <span class="error-msg">{{ emailError() }}</span>
+        }
       </div>
 
       <div class="field">
         <label>Contraseña</label>
-        <input
-          [(ngModel)]="password"
-          name="password"
-          type="password"
-          [class.input-error]="passwordError"
-          (blur)="validatePassword()"
-        />
-        <span class="error-msg" *ngIf="passwordError">{{ passwordError }}</span>
+        <div class="password-wrapper">
+          <input
+            [ngModel]="password()"
+            (ngModelChange)="password.set($event)"
+            name="password"
+            [type]="showPassword() ? 'text' : 'password'"
+            [class.input-error]="passwordError()"
+            (blur)="validatePassword()"
+          />
+          <button type="button" class="toggle-eye" (click)="togglePassword()">
+            <lucide-icon 
+              [img]="showPassword() ? EyeOff : Eye" 
+              size="16" 
+              color="#6b7280"
+            ></lucide-icon>
+          </button>
+        </div>
+        @if (passwordError()) {
+          <span class="error-msg">{{ passwordError() }}</span>
+        }
         <a href="#" class="forgot-link">Olvidé mi contraseña</a>
       </div>
 
@@ -46,11 +61,17 @@
         [disabled]="isSubmitDisabled()"
         [class.btn-disabled]="isSubmitDisabled()"
       >
-        {{ loading ? 'Iniciando...' : 'Iniciar Sesión' }}
+        {{ loading() ? 'Iniciando...' : 'Iniciar Sesión' }}
       </button>
 
-      <p class="server-error" *ngIf="serverError">{{ serverError }}</p>
-      <p class="success-msg" *ngIf="successMessage">{{ successMessage }}</p>
+      @if (serverError()) {
+        <p class="server-error animate-shake">{{ serverError() }}</p>
+      }
+
+      @if (successMessage()) {
+        <p class="success-msg">{{ successMessage() }}</p>
+      }
+
     </form>
 
     <p class="register-link">

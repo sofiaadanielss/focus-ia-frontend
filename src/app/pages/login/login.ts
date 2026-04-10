@@ -1,66 +1,74 @@
-import { Component } from '@angular/core';
+import { Component, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink, Router } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
+import { LucideAngularModule, Eye, EyeOff } from 'lucide-angular';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, LucideAngularModule],
   templateUrl: './login.html',
   styleUrl: './login.css'
 })
 export class Login {
-  email = '';
-  password = '';
-  emailError = '';
-  passwordError = '';
-  serverError = '';
-  successMessage = '';
-  loading = false;
+  email = signal('');
+  password = signal('');
+  emailError = signal('');
+  passwordError = signal('');
+  serverError = signal('');
+  successMessage = signal('');
+  loading = signal(false);
+  showPassword = signal(false);
+  readonly Eye = Eye;
+  readonly EyeOff = EyeOff;
 
   constructor(private router: Router, private authService: AuthService) {}
 
-  isSubmitDisabled(): boolean {
-    return !this.email || !this.password || !!this.emailError || !!this.passwordError || this.loading;
+  togglePassword() {
+    this.showPassword.update(v => !v);
   }
+
+  isSubmitDisabled = computed(() => {
+    return !this.email() || !this.password() || !!this.emailError() || !!this.passwordError() || this.loading();
+  });
 
   validateEmail() {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!this.email) {
-      this.emailError = 'El correo electrónico es obligatorio';
-    } else if (!emailRegex.test(this.email)) {
-      this.emailError = 'Formato de correo inválido';
+    if (!this.email()) {
+      this.emailError.set('El correo electrónico es obligatorio');
+    } else if (!emailRegex.test(this.email())) {
+      this.emailError.set('Formato de correo inválido');
     } else {
-      this.emailError = '';
+      this.emailError.set('');
     }
   }
 
   validatePassword() {
-    this.passwordError = !this.password ? 'La contraseña es obligatoria' : '';
+    this.passwordError.set(!this.password() ? 'La contraseña es obligatoria' : '');
   }
 
   onSubmit() {
     this.validateEmail();
     this.validatePassword();
-    if (this.emailError || this.passwordError) return;
+    if (this.emailError() || this.passwordError()) return;
 
-    this.loading = true;
-    this.serverError = '';
-    this.successMessage = '';
+    this.loading.set(true);
+    this.serverError.set('');
+    this.successMessage.set('');
 
-    this.authService.login(this.email, this.password).subscribe({
+    this.authService.login(this.email(), this.password()).subscribe({
       next: () => {
-        this.successMessage = 'Inicio de sesión exitoso';
+        this.successMessage.set('Inicio de sesión exitoso');
         this.router.navigate(['/dashboard']);
       },
       error: (err) => {
-        this.serverError = err.error?.detail || 'Correo o contraseña incorrectos';
-        this.loading = false;
+        this.serverError.set(err.error?.detail || 'Correo o contraseña incorrectos');
+        this.loading.set(false);
       },
       complete: () => {
-        this.loading = false;
+        this.loading.set(false);
       }
     });
   }
