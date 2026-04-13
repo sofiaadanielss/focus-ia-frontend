@@ -5,6 +5,7 @@ import { environment } from '../../../environments/environment';
  
 export interface RegisterRequest {
   name: string;
+  username: string
   email: string;
   password: string;
 }
