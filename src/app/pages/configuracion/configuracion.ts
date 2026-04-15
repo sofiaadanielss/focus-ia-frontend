@@ -1,59 +1,72 @@
-import { Component } from '@angular/core';
+import { Component, signal, computed, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { FocusService } from '../../core/services/focus.service';
 
 @Component({
   selector: 'app-configuracion',
   standalone: true,
+  imports: [CommonModule, FormsModule],
   templateUrl: './configuracion.html',
   styleUrls: ['./configuracion.css']
 })
 export class ConfiguracionComponent {
-  duracion: number = 45;
-  modoSeleccionado: string = '';
-  mensajeConfirmacion: boolean = false;
-  guardando: boolean = false;
 
-  modos = [
-    { id: 'tranquilo', texto: 'Tranquilo' },
-    { id: 'alerta', texto: 'Alerta' },
-    { id: 'absoluta', texto: 'Concentración absoluta' }
-  ];
+  private router   = inject(Router);
+  private focusSvc = inject(FocusService);
 
-  constructor(private router: Router) {
-    this.cargarPreferencias();
+  // Estado reactivo de preferencias
+  preferencias = signal({
+    modo: '',
+    duracion: 15
+  });
+
+  mostrarCompletado   = signal(false);
+  mostrarSesionActiva = signal(false);
+
+  // Bloquea guardar si no hay modo seleccionado
+  botonBloqueado = computed(() => this.preferencias().modo === '');
+
+  seleccionarModo(modo: string) {
+    this.preferencias.update(prev => ({ ...prev, modo }));
   }
 
-  cargarPreferencias() {
-    const raw = localStorage.getItem('focus_preferences');
-    if (raw) {
-      try {
-        const prefs = JSON.parse(raw);
-        this.modoSeleccionado = prefs.mode || '';
-        this.duracion = Number(prefs.duration) || 45;
-      } catch {}
-    }
-  }
-
-  seleccionarModo(id: string) {
-    this.modoSeleccionado = id;
+  actualizarDuracion(valor: number) {
+    this.preferencias.update(prev => ({ ...prev, duracion: valor }));
   }
 
   guardar() {
-    if (!this.modoSeleccionado || this.guardando) return;
+    if (this.botonBloqueado()) return;
 
-    this.guardando = true;
+    // Verificar si hay sesión activa antes de guardar
+    this.focusSvc.getActiveSession().subscribe({
+      next: (session) => {
+        const haySession = !!session;
 
-    const preferencias = {
-      mode: this.modoSeleccionado,
-      duration: Number(this.duracion)
-    };
+        // Guardar preferencias (simulación — aquí iría el llamado real a la API)
+        console.log('Guardando preferencias:', this.preferencias());
 
-    localStorage.setItem('focus_preferences', JSON.stringify(preferencias));
+        // Mostrar mensaje según si hay sesión activa o no
+        if (haySession) {
+          // La sesión sigue corriendo — solo actualizamos preferencias
+          this.mostrarSesionActiva.set(true);
+          setTimeout(() => this.mostrarSesionActiva.set(false), 4000);
+        } else {
+          this.mostrarCompletado.set(true);
+          setTimeout(() => this.mostrarCompletado.set(false), 3000);
+        }
+      },
+      error: () => {
+        // Si falla la consulta igual guardamos las preferencias
+        console.log('Guardando preferencias (sin verificar sesión):', this.preferencias());
+        this.mostrarCompletado.set(true);
+        setTimeout(() => this.mostrarCompletado.set(false), 3000);
+      }
+    });
+  }
 
-    this.mensajeConfirmacion = true;
-
-    setTimeout(() => {
-      this.router.navigate(['/dashboard']);
-    }, 600);
+  volver() {
+    this.router.navigate(['/dashboard']);
   }
 }

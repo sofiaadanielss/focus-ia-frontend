@@ -1,53 +1,83 @@
-<div class="main-container">
-  <div class="card">
-    <div class="avatar-container">
-      <div class="avatar-circle">
-        <span class="user-icon">👤</span>
-      </div>
+<div class="main-wrapper">
+  <div class="card-config">
+
+    <button class="back-btn" (click)="volver()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+           stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
+        <path d="M19 12H5M12 5l-7 7 7 7"/>
+      </svg>
+      Volver
+    </button>
+
+    <div class="profile-badge">
+      <span class="icon">👤</span>
     </div>
+
     <h1>Configuración</h1>
-    <div class="section">
-      <p class="section-title">Establece nivel de concentración</p>
-      <div class="button-group">
-        @for (modo of modos; track modo.id) {
-          <button 
-            (click)="seleccionarModo(modo.id)"
-            [class.active]="modoSeleccionado === modo.id"
-            class="mode-button">
-            {{ modo.texto }}
-          </button>
-        }
+
+    <div class="control-section">
+      <p class="section-label">Establece nivel de concentración</p>
+      <div class="modes-grid">
+        <button 
+          (click)="seleccionarModo('absoluta')"
+          [class.active]="preferencias().modo === 'absoluta'"
+          class="btn-mode">
+          Concentración absoluta
+        </button>
+        
+        <button 
+          (click)="seleccionarModo('alerta')"
+          [class.active]="preferencias().modo === 'alerta'"
+          class="btn-mode">
+          Alerta
+        </button>
+
+        <button 
+          (click)="seleccionarModo('tranquilo')"
+          [class.active]="preferencias().modo === 'tranquilo'"
+          class="btn-mode">
+          Tranquilo
+        </button>
       </div>
     </div>
-    <div class="section">
-      <p class="section-title">Establece la duración de la sesión</p>
-      <div class="slider-container">
+
+    <div class="control-section">
+      <p class="section-label">Establece la duración de la sesión</p>
+      <div class="slider-box">
         <input 
           type="range" 
           min="15" 
           max="120" 
-          [value]="duracion"
-          (input)="duracion = $any($event.target).value"
-          class="slider">
-        <div class="slider-labels">
+          [ngModel]="preferencias().duracion"
+          (ngModelChange)="actualizarDuracion($event)"
+          class="range-input">
+        
+        <div class="range-labels">
           <span>15 min</span>
-          <span class="current-value">{{ duracion }} min</span>
+          <span class="current-val">{{ preferencias().duracion }} min</span>
           <span>120 min</span>
         </div>
       </div>
     </div>
-    <div class="footer">
+
+    <div class="actions">
       <button 
         (click)="guardar()" 
-        [disabled]="!modoSeleccionado"
-        class="save-button">
+        [disabled]="botonBloqueado()"
+        class="save-btn">
         Guardar Preferencias
       </button>
-      
-      @if (mensajeConfirmacion) {
-        <p class="success-msg">
+
+      @if (mostrarCompletado()) {
+        <div class="toast-success animate-fade">
           ✅ Completado
-        </p>
+        </div>
+      }
+
+      @if (mostrarSesionActiva()) {
+        <div class="toast-sesion animate-fade">
+          Sesión en curso — las preferencias se actualizaron sin interrumpirla
+        </div>
       }
     </div>
   </div>
