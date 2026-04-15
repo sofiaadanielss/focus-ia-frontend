@@ -2,7 +2,9 @@
   <div class="profile-card">
     
     <div class="card-header">
-      <span class="brand">Focus AI</span>
+      <span class="brand">
+        <img src="/logo.png" class="brand-logo">
+        Focus AI</span>
       <span class="success-badge" *ngIf="successMessage">{{ successMessage }}</span>
     </div>
 
@@ -45,6 +47,8 @@
         />
         <span class="error-msg" *ngIf="emailError">{{ emailError }}</span>
       </div>
+
+
 
       <p class="server-error" *ngIf="serverError">{{ serverError }}</p>
 

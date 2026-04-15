@@ -167,3 +167,14 @@
   cursor: not-allowed;
   opacity: 1;
 }
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-logo {
+  width: 32px;
+  height: auto;
+}
