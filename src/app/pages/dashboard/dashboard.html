@@ -39,8 +39,36 @@
       <p class="page-subtitle">Gestiona tu sesión de estudio y concentración</p>
     </div>
 
+    <!-- Camera denied message -->
+    @if (cameraPermisoDenegado && !sesionActiva) {
+      <div class="camera-denied-card">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="28" height="28">
+          <path d="M16.5 12a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0Z"/>
+          <path d="M2 2l20 20"/>
+          <path d="M6.7 6.7A7.5 7.5 0 0 0 4.5 12c0 4.14 3.36 7.5 7.5 7.5a7.5 7.5 0 0 0 5.3-2.2"/>
+          <path d="M19.5 12c0-4.14-3.36-7.5-7.5-7.5a7.47 7.47 0 0 0-2.8.55"/>
+        </svg>
+        <div>
+          <p class="denied-title">Acceso a la cámara denegado</p>
+          <p class="denied-text">El rastreo de concentración necesita acceso a tu cámara para detectar tu rostro y mirada. Por favor, permite el acceso en la configuración de tu navegador e intenta de nuevo.</p>
+        </div>
+      </div>
+    }
+
     <!-- Timer Card -->
     <div class="timer-card" [class.active]="sesionActiva">
+      <!-- Camera status badge -->
+      @if (sesionActiva && cameraStatus === 'active') {
+        <div class="camera-badge active-badge">
+          <span class="camera-dot"></span>
+          Cámara activa
+          @if (ultimoEventoTimestamp) {
+            <span class="badge-separator">·</span>
+            <span class="badge-event">{{ ultimoEventoTimestamp }} &nbsp;{{ ultimoEventoTipo }}</span>
+          }
+        </div>
+      }
+
       <div class="timer-label">
         @if (!sesionActiva && !sesionTerminada) {
           Sin sesión activa · {{ modoTexto }} · {{ duracionMinutos }} min
@@ -55,6 +83,37 @@
           Sesión finalizada
         }
       </div>
+
+      <!-- Camera feed area -->
+      @if (sesionActiva || cameraStatus === 'requesting') {
+        <div class="camera-container">
+          <video #videoEl autoplay playsinline muted class="camera-video"></video>
+          <canvas #canvasEl class="camera-canvas"></canvas>
+          @if (cameraStatus === 'requesting') {
+            <div class="camera-overlay">
+              <div class="camera-placeholder">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48">
+                  <circle cx="12" cy="8" r="4"/>
+                  <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+                </svg>
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Placeholder when no session -->
+      @if (!sesionActiva && !sesionTerminada) {
+        <div class="camera-container placeholder">
+          <div class="camera-placeholder-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="56" height="56">
+              <circle cx="12" cy="8" r="4"/>
+              <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+            </svg>
+            <p class="placeholder-text">Aquí va la cámara de la persona</p>
+          </div>
+        </div>
+      }
 
       <div class="timer-display" [class.paused]="pausado">{{ timerDisplay }}</div>
 
@@ -74,6 +133,18 @@
 
       @if (error) {
         <p class="error-msg">{{ error }}</p>
+      }
+
+      <!-- Distraction counter -->
+      @if (sesionActiva && totalDistracciones > 0) {
+        <div class="distraction-counter">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          {{ totalDistracciones }} distracción{{ totalDistracciones > 1 ? 'es' : '' }} detectada{{ totalDistracciones > 1 ? 's' : '' }}
+        </div>
       }
 
       <div class="btn-group">
@@ -110,6 +181,14 @@
       </div>
     </div>
 
+    <!-- Session summary with distractions -->
+    @if (sesionTerminada && totalDistracciones > 0) {
+      <div class="summary-card">
+        <h3 class="summary-title">Resumen de Distracciones</h3>
+        <p class="summary-total">Se detectaron <strong>{{ totalDistracciones }}</strong> distracción{{ totalDistracciones > 1 ? 'es' : '' }} durante la sesión.</p>
+      </div>
+    }
+
     <!-- Quick access card -->
     <div class="quick-card" routerLink="/configuracion">
       <div class="quick-icon">
@@ -125,6 +204,32 @@
       <span class="quick-arrow">→</span>
     </div>
   </main>
+</div>
+
+<!-- Toast notifications (esquina inferior derecha) -->
+<div class="toast-container">
+  @for (toast of toasts; track toast.tipo; let i = $index) {
+    <div class="toast-notification" [class.toast-fuera]="toast.tipo === 'fuera_de_encuadre'" [class.toast-desvio]="toast.tipo === 'desvio_mirada'">
+      <div class="toast-icon">
+        @if (toast.tipo === 'fuera_de_encuadre') {
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+            <circle cx="12" cy="8" r="4"/>
+            <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+            <line x1="2" y1="2" x2="22" y2="22"/>
+          </svg>
+        }
+        @if (toast.tipo === 'desvio_mirada') {
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/>
+            <line x1="2" y1="2" x2="22" y2="22"/>
+          </svg>
+        }
+      </div>
+      <span class="toast-message">{{ toast.mensaje }}</span>
+      <button class="toast-close" (click)="cerrarToast(i)">✕</button>
+    </div>
+  }
 </div>
 
 <!-- Modal de completado -->
@@ -148,8 +253,15 @@
         <p class="modal-text">
           Completaste tu sesión de estudio de <strong>{{ duracionMinutos }} minutos</strong> en modo <strong>{{ modoTexto }}</strong>.
         </p>
-        <p class="modal-text">¡Lograste acabar la sesión con éxito!</p>
-        <p class="modal-subtext">Sigue así, vas increíble 🚀</p>
+        @if (totalDistracciones > 0) {
+          <p class="modal-text">
+            Se registraron <strong>{{ totalDistracciones }}</strong> distracción{{ totalDistracciones > 1 ? 'es' : '' }}.
+          </p>
+        }
+        @if (totalDistracciones === 0) {
+          <p class="modal-text">¡No se detectaron distracciones! Concentración perfecta.</p>
+        }
+        <p class="modal-subtext">¡Lograste acabar la sesión con éxito! 🚀</p>
         <button class="btn-modal-close" (click)="cerrarModal()">
           Cerrar
         </button>
