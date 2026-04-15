@@ -17,6 +17,7 @@
   font-family: 'DM Sans', sans-serif;
   overflow: hidden;
   padding: 40px 32px;
+  position: relative;
 }
 
 .profile-card {
