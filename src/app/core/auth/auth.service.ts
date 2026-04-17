@@ -5,7 +5,7 @@ import { environment } from '../../../environments/environment';
  
 export interface RegisterRequest {
   name: string;
-  username: string
+  username: string;
   email: string;
   password: string;
 }
@@ -14,6 +14,8 @@ export interface RegisterResponse {
   id: number;
   email: string;
   name: string;
+  username?: string;
+  full_name?: string;
   is_active: boolean;
   is_superuser: boolean;
   is_verified: boolean;
@@ -28,6 +30,8 @@ export interface UserProfile {
   id: number;
   email: string;
   name: string;
+  username?: string;
+  full_name?: string;
   is_active: boolean;
   is_superuser: boolean;
   is_verified: boolean;
@@ -35,7 +39,10 @@ export interface UserProfile {
  
 export interface UpdateProfileRequest {
   name?: string;
+  username?: string;
+  full_name?: string;
   email?: string;
+  password?: string;
 }
  
 @Injectable({
@@ -77,7 +84,7 @@ export class AuthService {
     return this.http.get<UserProfile>(`${this.BASE_URL}/users/me`);
   }
  
-  // Actualizar perfil del usuario autenticado
+  // Actualizar perfil del usuario autenticado (usando PATCH para actualización parcial)
   updateProfile(data: UpdateProfileRequest): Observable<UserProfile> {
     return this.http.patch<UserProfile>(`${this.BASE_URL}/users/me`, data);
   }

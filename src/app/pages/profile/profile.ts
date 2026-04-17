@@ -1,9 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { AuthService } from '../../core/auth/auth.service';
- 
+import { AuthService, UserProfile, UpdateProfileRequest } from '../../core/auth/auth.service';
+import { Subscription } from 'rxjs';
+
 @Component({
   selector: 'app-profile',
   standalone: true,
@@ -11,19 +12,25 @@ import { AuthService } from '../../core/auth/auth.service';
   templateUrl: './profile.html',
   styleUrl: './profile.css'
 })
-export class Profile implements OnInit {
+export class Profile implements OnInit, OnDestroy {
   currentName = '';
-  name = '';
+  fullName = '';
+  username = '';
   email = '';
- 
-  nameError = '';
-  emailError = '';
+  password = '';
+  
+  fullNameError = '';
+  usernameError = '';
+  passwordError = '';
   serverError = '';
   successMessage = '';
   loading = false;
- 
+  
+  private profileSubscription?: Subscription;
+  private updateSubscription?: Subscription;
+
   constructor(private router: Router, private authService: AuthService) {}
- 
+
   ngOnInit() {
     if (!this.authService.isLoggedIn()) {
       this.router.navigate(['/login']);
@@ -31,92 +38,179 @@ export class Profile implements OnInit {
     }
     this.loadProfile();
   }
- 
+
+  ngOnDestroy() {
+    // Limpiar suscripciones para evitar memory leaks
+    if (this.profileSubscription) {
+      this.profileSubscription.unsubscribe();
+    }
+    if (this.updateSubscription) {
+      this.updateSubscription.unsubscribe();
+    }
+  }
+
   private loadProfile() {
-    this.authService.getProfile().subscribe({
-      next: (user) => {
-        this.name = user.name ?? '';
-        this.email = user.email ?? '';
-        this.currentName = this.name;
+    // Cancelar suscripción anterior si existe
+    if (this.profileSubscription) {
+      this.profileSubscription.unsubscribe();
+    }
+    
+    this.profileSubscription = this.authService.getProfile().subscribe({
+      next: (user: UserProfile) => {
+        // Mapear los campos según lo que devuelve el backend
+        this.fullName = (user as any).full_name || user.name || '';
+        this.username = (user as any).username || user.name || '';
+        this.email = user.email;
+        this.currentName = this.fullName || this.username;
+        this.password = ''; // Limpiar campo de contraseña
       },
       error: (err) => {
+        console.error('Error loading profile:', err);
         if (err.status === 401) {
           this.authService.logout();
           this.router.navigate(['/login']);
         } else {
           this.serverError = 'No se pudo cargar el perfil.';
         }
+        this.loading = false;
       }
     });
   }
- 
+
   isSubmitDisabled(): boolean {
     return (
-      !this.name ||
-      !this.email ||
-      !!this.nameError ||
-      !!this.emailError ||
+      (!this.fullName && !this.username) ||
+      !!this.fullNameError ||
+      !!this.usernameError ||
+      !!this.passwordError ||
       this.loading
     );
   }
- 
-  validateName() {
-    this.nameError = !this.name.trim() ? 'El nombre no puede estar vacío' : '';
-  }
- 
-  validateEmail() {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!this.email.trim()) {
-      this.emailError = 'El correo no puede estar vacío';
-    } else if (!emailRegex.test(this.email)) {
-      this.emailError = 'Formato de correo inválido';
+
+  validateFullName() {
+    if (!this.fullName.trim()) {
+      this.fullNameError = 'El nombre completo no puede estar vacío';
+    } else if (this.fullName.trim().length < 3) {
+      this.fullNameError = 'El nombre debe tener al menos 3 caracteres';
     } else {
-      this.emailError = '';
+      this.fullNameError = '';
     }
   }
- 
+
+  validateUsername() {
+    if (!this.username.trim()) {
+      this.usernameError = 'El nombre de usuario no puede estar vacío';
+    } else if (this.username.trim().length < 3) {
+      this.usernameError = 'El nombre de usuario debe tener al menos 3 caracteres';
+    } else if (!/^[a-zA-Z0-9_]+$/.test(this.username)) {
+      this.usernameError = 'Solo letras, números y guión bajo';
+    } else {
+      this.usernameError = '';
+    }
+  }
+
+  validatePassword() {
+    if (this.password && this.password.length > 0) {
+      if (this.password.length < 6) {
+        this.passwordError = 'La contraseña debe tener al menos 6 caracteres';
+      } else {
+        this.passwordError = '';
+      }
+    } else {
+      this.passwordError = '';
+    }
+  }
+
   clearSuccess() {
     this.successMessage = '';
+    this.serverError = '';
   }
- 
+
+  volver() {
+    this.router.navigate(['/dashboard']);
+  }
+
   onSubmit() {
-    this.validateName();
-    this.validateEmail();
-    if (this.nameError || this.emailError) return;
- 
+    // Validar todos los campos
+    this.validateFullName();
+    this.validateUsername();
+    this.validatePassword();
+    
+    if (this.fullNameError || this.usernameError || this.passwordError) {
+      return;
+    }
+
+    if (!this.fullName.trim() && !this.username.trim()) {
+      this.serverError = 'Debes proporcionar al menos nombre completo o nombre de usuario';
+      return;
+    }
+
     this.loading = true;
     this.serverError = '';
     this.successMessage = '';
- 
-    this.authService.updateProfile({
-      name: this.name.trim(),
-      email: this.email.trim()
-    }).subscribe({
-      next: (user) => {
-        this.currentName = user.name;
-        this.name = user.name;
+
+    // Construir objeto de actualización según UpdateProfileRequest
+    const updateData: UpdateProfileRequest = {};
+    
+    if (this.fullName.trim()) {
+      updateData.full_name = this.fullName.trim();
+      updateData.name = this.fullName.trim(); // Para compatibilidad con name
+    }
+    
+    if (this.username.trim()) {
+      updateData.username = this.username.trim();
+    }
+    
+    if (this.password && this.password.trim()) {
+      updateData.password = this.password.trim();
+    }
+
+    // Cancelar suscripción anterior si existe
+    if (this.updateSubscription) {
+      this.updateSubscription.unsubscribe();
+    }
+
+    this.updateSubscription = this.authService.updateProfile(updateData).subscribe({
+      next: (user: UserProfile) => {
+        this.currentName = (user as any).full_name || (user as any).username || user.name || this.fullName;
+        this.fullName = (user as any).full_name || user.name || this.fullName;
+        this.username = (user as any).username || user.name || this.username;
         this.email = user.email;
-        this.successMessage = 'Completado';
-        setTimeout(() => (this.successMessage = ''), 4000);
+        this.password = ''; // Limpiar campo de contraseña
+        this.successMessage = '✅ Perfil actualizado';
+        
+        // Limpiar mensaje de éxito después de 3 segundos
+        setTimeout(() => {
+          if (this.successMessage === '✅ Perfil actualizado') {
+            this.successMessage = '';
+          }
+        }, 3000);
+        
+        this.loading = false;
       },
       error: (err) => {
-        const detail = (err.error?.detail ?? '').toLowerCase();
-        if (detail.includes('email') || detail.includes('correo')) {
-          this.emailError = 'Este correo ya está registrado por otro usuario';
+        console.error('Error al actualizar perfil:', err);
+        
+        const errorMessage = err.error?.detail || err.error?.message || '';
+        const errorLower = errorMessage.toLowerCase();
+        
+        if (errorLower.includes('email') || errorLower.includes('correo')) {
+          this.serverError = 'No se puede cambiar el correo electrónico';
+        } else if (errorLower.includes('username') || errorLower.includes('nombre de usuario')) {
+          this.usernameError = 'Este nombre de usuario ya está en uso';
         } else if (err.status === 401) {
           this.authService.logout();
           this.router.navigate(['/login']);
+          return;
         } else {
-          this.serverError = err.error?.detail || 'Error al guardar los cambios';
+          this.serverError = errorMessage || 'Error al guardar los cambios';
         }
-        this.loading = false;
-      },
-      complete: () => {
+        
         this.loading = false;
       }
     });
   }
- 
+
   onLogout() {
     this.authService.logout();
     this.router.navigate(['/login']);

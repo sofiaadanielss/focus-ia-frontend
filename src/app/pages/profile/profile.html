@@ -1,10 +1,19 @@
 <div class="profile-page">
 
   <div class="card-header">
-    <span class="brand">
-      <img src="/logo.png" class="brand-logo">
-      Focus AI
-    </span>
+    <div class="brand-section">
+      <span class="brand">
+        <img src="/logo.png" class="brand-logo" alt="Logo">
+        Focus AI
+      </span>
+      <button class="back-btn" type="button" (click)="volver()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+             stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
+          <path d="M19 12H5M12 5l-7 7 7 7"/>
+        </svg>
+        Volver
+      </button>
+    </div>
     <span class="success-badge" *ngIf="successMessage">{{ successMessage }}</span>
   </div>
 
@@ -17,35 +26,64 @@
           <path d="M6 42 C6 32 42 32 42 42" stroke="#7c3aed" stroke-width="2.5" fill="none" stroke-linecap="round"/>
         </svg>
       </div>
-      <p class="avatar-name">{{ currentName || 'Nombre' }}</p>
+      <p class="avatar-name">{{ currentName || 'Usuario' }}</p>
     </div>
 
     <form (ngSubmit)="onSubmit()" novalidate class="profile-form">
 
       <div class="field">
+        <label>Nombre completo</label>
+        <input
+          [(ngModel)]="fullName"
+          name="fullName"
+          type="text"
+          [class.input-error]="fullNameError"
+          (blur)="validateFullName()"
+          (input)="clearSuccess()"
+          placeholder="Tu nombre completo"
+        />
+        <span class="error-msg" *ngIf="fullNameError">{{ fullNameError }}</span>
+      </div>
+
+      <div class="field">
         <label>Nombre de usuario</label>
         <input
-          [(ngModel)]="name"
-          name="name"
+          [(ngModel)]="username"
+          name="username"
           type="text"
-          [class.input-error]="nameError"
-          (blur)="validateName()"
+          [class.input-error]="usernameError"
+          (blur)="validateUsername()"
           (input)="clearSuccess()"
+          placeholder="Nombre de usuario"
         />
-        <span class="error-msg" *ngIf="nameError">{{ nameError }}</span>
+        <span class="error-msg" *ngIf="usernameError">{{ usernameError }}</span>
       </div>
 
       <div class="field">
         <label>Correo Electrónico</label>
         <input
-          [(ngModel)]="email"
+          [ngModel]="email"
           name="email"
-          type="text"
-          [class.input-error]="emailError"
-          (blur)="validateEmail()"
+          type="email"
+          disabled
+          class="disabled-input"
+        />
+        <small class="email-hint">El correo electrónico no se puede modificar</small>
+      </div>
+
+      <div class="field">
+        <label>Nueva contraseña</label>
+        <input
+          [(ngModel)]="password"
+          name="password"
+          type="password"
+          placeholder="Dejar en blanco para mantener la actual"
+          [class.input-error]="passwordError"
+          (blur)="validatePassword()"
           (input)="clearSuccess()"
         />
-        <span class="error-msg" *ngIf="emailError">{{ emailError }}</span>
+        <span class="error-msg" *ngIf="passwordError">{{ passwordError }}</span>
+        <small class="password-hint">Mínimo 6 caracteres. Solo si deseas cambiar la contraseña</small>
       </div>
 
       <p class="server-error" *ngIf="serverError">{{ serverError }}</p>
@@ -56,7 +94,15 @@
         [disabled]="isSubmitDisabled()"
         [class.btn-disabled]="isSubmitDisabled()"
       >
-        {{ loading ? 'Guardando...' : 'Guardar' }}
+        {{ loading ? 'Guardando...' : 'Guardar cambios' }}
+      </button>
+
+      <button
+        type="button"
+        class="btn-logout"
+        (click)="onLogout()"
+      >
+        Cerrar sesión
       </button>
 
     </form>
