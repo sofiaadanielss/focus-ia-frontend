@@ -1,9 +1,8 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService, UserProfile, UpdateProfileRequest } from '../../core/auth/auth.service';
-import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-profile',
@@ -12,7 +11,7 @@ import { Subscription } from 'rxjs';
   templateUrl: './profile.html',
   styleUrl: './profile.css'
 })
-export class Profile implements OnInit, OnDestroy {
+export class Profile implements OnInit {
   currentName = '';
   fullName = '';
   username = '';
@@ -25,9 +24,6 @@ export class Profile implements OnInit, OnDestroy {
   serverError = '';
   successMessage = '';
   loading = false;
-  
-  private profileSubscription?: Subscription;
-  private updateSubscription?: Subscription;
 
   constructor(private router: Router, private authService: AuthService) {}
 
@@ -39,30 +35,18 @@ export class Profile implements OnInit, OnDestroy {
     this.loadProfile();
   }
 
-  ngOnDestroy() {
-    // Limpiar suscripciones para evitar memory leaks
-    if (this.profileSubscription) {
-      this.profileSubscription.unsubscribe();
-    }
-    if (this.updateSubscription) {
-      this.updateSubscription.unsubscribe();
-    }
-  }
-
   private loadProfile() {
-    // Cancelar suscripción anterior si existe
-    if (this.profileSubscription) {
-      this.profileSubscription.unsubscribe();
-    }
-    
-    this.profileSubscription = this.authService.getProfile().subscribe({
+    this.authService.getProfile().subscribe({
       next: (user: UserProfile) => {
         // Mapear los campos según lo que devuelve el backend
         this.fullName = (user as any).full_name || user.name || '';
         this.username = (user as any).username || user.name || '';
         this.email = user.email;
         this.currentName = this.fullName || this.username;
-        this.password = ''; // Limpiar campo de contraseña
+        this.password = '';
+        
+        // Debug: ver qué datos llegan
+        console.log('Perfil cargado:', user);
       },
       error: (err) => {
         console.error('Error loading profile:', err);
@@ -72,7 +56,6 @@ export class Profile implements OnInit, OnDestroy {
         } else {
           this.serverError = 'No se pudo cargar el perfil.';
         }
-        this.loading = false;
       }
     });
   }
@@ -149,12 +132,12 @@ export class Profile implements OnInit, OnDestroy {
     this.serverError = '';
     this.successMessage = '';
 
-    // Construir objeto de actualización según UpdateProfileRequest
+    // Construir objeto de actualización
     const updateData: UpdateProfileRequest = {};
     
     if (this.fullName.trim()) {
       updateData.full_name = this.fullName.trim();
-      updateData.name = this.fullName.trim(); // Para compatibilidad con name
+      updateData.name = this.fullName.trim();
     }
     
     if (this.username.trim()) {
@@ -165,21 +148,15 @@ export class Profile implements OnInit, OnDestroy {
       updateData.password = this.password.trim();
     }
 
-    // Cancelar suscripción anterior si existe
-    if (this.updateSubscription) {
-      this.updateSubscription.unsubscribe();
-    }
-
-    this.updateSubscription = this.authService.updateProfile(updateData).subscribe({
+    this.authService.updateProfile(updateData).subscribe({
       next: (user: UserProfile) => {
         this.currentName = (user as any).full_name || (user as any).username || user.name || this.fullName;
         this.fullName = (user as any).full_name || user.name || this.fullName;
         this.username = (user as any).username || user.name || this.username;
         this.email = user.email;
-        this.password = ''; // Limpiar campo de contraseña
+        this.password = '';
         this.successMessage = '✅ Perfil actualizado';
         
-        // Limpiar mensaje de éxito después de 3 segundos
         setTimeout(() => {
           if (this.successMessage === '✅ Perfil actualizado') {
             this.successMessage = '';
