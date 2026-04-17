@@ -3,6 +3,7 @@ import { Router, RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs'; 
 import { CameraTrackingService, CameraStatus, ToastEvent } from '../../core/services/camera-tracking.service';
 import { DistractionLogService, DistractionEvent } from '../../core/services/distracion-log.service';
+import { FocusService } from '../../core/services/focus.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -46,6 +47,9 @@ export class Dashboard implements OnInit, OnDestroy {
   ultimoEventoTipo = '';
   totalDistracciones = 0;
 
+  // ID de sesión activa en backend
+  private sessionIdBackend: number | null = null;
+
   private interval: any;
   private toastSub!: Subscription;
   private statusSub!: Subscription;
@@ -54,12 +58,14 @@ export class Dashboard implements OnInit, OnDestroy {
     private router: Router,
     private cdr: ChangeDetectorRef,
     private cameraTracking: CameraTrackingService,
-    private distractionLog: DistractionLogService
+    private distractionLog: DistractionLogService,
+    private focusService: FocusService
   ) {}
 
   ngOnInit() {
     this.cargarPreferencias();
     this.actualizarDisplay();
+    this.verificarSesionExistente();
 
     this.toastSub = this.cameraTracking.toast$.subscribe((event: ToastEvent) => {
       this.manejarToast(event);
@@ -87,26 +93,65 @@ export class Dashboard implements OnInit, OnDestroy {
     this.statusSub?.unsubscribe();
   }
 
+  // NUEVO: Verificar si ya hay una sesión activa en el backend
+  private verificarSesionExistente() {
+    this.focusService.getActiveSession().subscribe({
+      next: (session) => {
+        if (session && session.id) {
+          // Ya hay una sesión activa, no permitir iniciar otra
+          this.sesionActiva = true;
+          this.sessionIdBackend = session.id;
+          this.error = 'Ya hay una sesión activa. Finalízala antes de iniciar una nueva.';
+          this.cdr.detectChanges();
+        }
+      },
+      error: () => {
+        // No hay sesión activa, todo bien
+        console.log('No hay sesión activa');
+      }
+    });
+  }
+
   cargarPreferencias() {
-    const raw = localStorage.getItem('focus_preferences');
-    if (raw) {
-      try {
-        const prefs = JSON.parse(raw);
-        this.duracionMinutos = Number(prefs.duration) || 45;
-        const modosMap: Record<string, string> = {
-          'tranquilo': 'Tranquilo',
-          'alerta': 'Alerta',
-          'absoluta': 'Concentración absoluta'
-        };
-        this.modoTexto = modosMap[prefs.mode] || 'No configurado';
-      } catch {}
+    const prefs = this.focusService.getPreferenciasLocal();
+    if (prefs) {
+      this.duracionMinutos = Number(prefs.duration) || 45;
+      const modosMap: Record<string, string> = {
+        'tranquilo': 'Tranquilo',
+        'alerta': 'Alerta',
+        'absoluta': 'Concentración absoluta'
+      };
+      this.modoTexto = modosMap[prefs.mode] || 'No configurado';
+    } else {
+      // Valores por defecto
+      this.duracionMinutos = 45;
+      this.modoTexto = 'Tranquilo';
     }
     this.tiempoTotal = this.duracionMinutos * 60;
     this.tiempoRestante = this.tiempoTotal;
   }
 
   async startSession() {
-    if (this.loading || this.sesionActiva) return;
+    // Validar que no haya sesión activa
+    if (this.loading || this.sesionActiva) {
+      this.error = 'Ya hay una sesión activa. Finalízala primero.';
+      return;
+    }
+
+    // Verificar nuevamente en backend
+    try {
+      const activeSession = await this.focusService.getActiveSession().toPromise();
+      if (activeSession && activeSession.id) {
+        this.error = 'Ya hay una sesión activa en el servidor.';
+        this.sesionActiva = true;
+        this.sessionIdBackend = activeSession.id;
+        this.loading = false;
+        this.cdr.detectChanges();
+        return;
+      }
+    } catch (err) {
+      // No hay sesión activa, continuar
+    }
 
     this.loading = true;
     this.error = '';
@@ -145,6 +190,17 @@ export class Dashboard implements OnInit, OnDestroy {
       return;
     }
 
+    // Crear sesión en el backend
+    try {
+      const newSession = await this.focusService.startSessionWithDuration(this.duracionMinutos).toPromise();
+      if (newSession && newSession.id) {
+        this.sessionIdBackend = newSession.id;
+      }
+    } catch (err) {
+      console.error('Error al crear sesión en backend:', err);
+      // Continuamos igual, pero sin ID de backend
+    }
+
     this.pausado = false;
     this.sesionTerminada = false;
     this.mostrarModal = false;
@@ -171,7 +227,7 @@ export class Dashboard implements OnInit, OnDestroy {
     }
   }
 
-  endSession() {
+  async endSession() {
     if (!this.sesionActiva || this.loading) return;
 
     this.loading = true;
@@ -180,6 +236,16 @@ export class Dashboard implements OnInit, OnDestroy {
 
     this.horaFin = this.formatearFecha(new Date());
     const completada = this.tiempoRestante <= 0;
+
+    // Finalizar sesión en backend si existe
+    if (this.sessionIdBackend) {
+      try {
+        await this.focusService.endSession(this.sessionIdBackend).toPromise();
+      } catch (err) {
+        console.error('Error al finalizar sesión en backend:', err);
+      }
+      this.sessionIdBackend = null;
+    }
 
     // Sincronizar distracciones
     const distraccionesData = this.distractionLog.sincronizarAlFinalizar();
@@ -234,8 +300,11 @@ export class Dashboard implements OnInit, OnDestroy {
     this.totalDistracciones = 0;
     this.ultimoEventoTimestamp = '';
     this.ultimoEventoTipo = '';
+    this.sessionIdBackend = null;
+    this.error = '';
     this.cargarPreferencias();
     this.actualizarDisplay();
+    this.cdr.detectChanges();
   }
 
   cerrarModal() {

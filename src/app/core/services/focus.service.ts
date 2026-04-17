@@ -47,11 +47,11 @@ export class FocusService {
   }
 
   guardarPreferenciasLocal(prefs: Preference): void {
-    localStorage.setItem('focus_preferencias', JSON.stringify(prefs));
+    localStorage.setItem('focus_preferences', JSON.stringify(prefs));
   }
 
   getPreferenciasLocal(): Preference | null {
-    const data = localStorage.getItem('focus_preferencias');
+    const data = localStorage.getItem('focus_preferences');
     return data ? JSON.parse(data) : null;
   }
 

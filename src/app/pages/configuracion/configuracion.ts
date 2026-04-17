@@ -1,4 +1,4 @@
-import { Component, signal, computed, inject } from '@angular/core';
+import { Component, signal, computed, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -11,7 +11,7 @@ import { FocusService } from '../../core/services/focus.service';
   templateUrl: './configuracion.html',
   styleUrls: ['./configuracion.css']
 })
-export class ConfiguracionComponent {
+export class ConfiguracionComponent implements OnInit {
 
   private router   = inject(Router);
   private focusSvc = inject(FocusService);
@@ -19,14 +19,48 @@ export class ConfiguracionComponent {
   // Estado reactivo de preferencias
   preferencias = signal({
     modo: '',
-    duracion: 15
+    duracion: 45  // Valor por defecto
   });
 
   mostrarCompletado   = signal(false);
   mostrarSesionActiva = signal(false);
+  haySesionActiva = signal(false);
 
   // Bloquea guardar si no hay modo seleccionado
   botonBloqueado = computed(() => this.preferencias().modo === '');
+
+  ngOnInit() {
+    this.cargarPreferenciasGuardadas();
+    this.verificarSesionActiva();
+  }
+
+  private cargarPreferenciasGuardadas() {
+    // Cargar desde localStorage
+    const localPrefs = this.focusSvc.getPreferenciasLocal();
+    if (localPrefs) {
+      this.preferencias.set({
+        modo: localPrefs.mode,
+        duracion: localPrefs.duration
+      });
+    } else {
+      // Valores por defecto
+      this.preferencias.set({
+        modo: 'tranquilo',
+        duracion: 45
+      });
+    }
+  }
+
+  private verificarSesionActiva() {
+    this.focusSvc.getActiveSession().subscribe({
+      next: (session) => {
+        this.haySesionActiva.set(!!session);
+      },
+      error: () => {
+        this.haySesionActiva.set(false);
+      }
+    });
+  }
 
   seleccionarModo(modo: string) {
     this.preferencias.update(prev => ({ ...prev, modo }));
@@ -36,34 +70,35 @@ export class ConfiguracionComponent {
     this.preferencias.update(prev => ({ ...prev, duracion: valor }));
   }
 
-  guardar() {
+  async guardar() {
     if (this.botonBloqueado()) return;
 
-    // Verificar si hay sesión activa antes de guardar
-    this.focusSvc.getActiveSession().subscribe({
-      next: (session) => {
-        const haySession = !!session;
+    const prefs = {
+      mode: this.preferencias().modo,
+      duration: this.preferencias().duracion
+    };
 
-        // Guardar preferencias (simulación — aquí iría el llamado real a la API)
-        console.log('Guardando preferencias:', this.preferencias());
-
-        // Mostrar mensaje según si hay sesión activa o no
-        if (haySession) {
-          // La sesión sigue corriendo — solo actualizamos preferencias
-          this.mostrarSesionActiva.set(true);
-          setTimeout(() => this.mostrarSesionActiva.set(false), 4000);
-        } else {
-          this.mostrarCompletado.set(true);
-          setTimeout(() => this.mostrarCompletado.set(false), 3000);
-        }
-      },
-      error: () => {
-        // Si falla la consulta igual guardamos las preferencias
-        console.log('Guardando preferencias (sin verificar sesión):', this.preferencias());
+    try {
+      // Guardar en localStorage primero
+      this.focusSvc.guardarPreferenciasLocal(prefs);
+      
+      // Intentar guardar en backend
+      await this.focusSvc.savePreferences(prefs.mode, prefs.duration).toPromise();
+      
+      // Mostrar mensaje según si hay sesión activa
+      if (this.haySesionActiva()) {
+        this.mostrarSesionActiva.set(true);
+        setTimeout(() => this.mostrarSesionActiva.set(false), 4000);
+      } else {
         this.mostrarCompletado.set(true);
         setTimeout(() => this.mostrarCompletado.set(false), 3000);
       }
-    });
+    } catch (error) {
+      console.error('Error guardando preferencias:', error);
+      // Aún así, las preferencias quedan en localStorage
+      this.mostrarCompletado.set(true);
+      setTimeout(() => this.mostrarCompletado.set(false), 3000);
+    }
   }
 
   volver() {
