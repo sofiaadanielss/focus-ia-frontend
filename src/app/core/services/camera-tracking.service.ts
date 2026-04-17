@@ -20,7 +20,6 @@ export class CameraTrackingService {
   private detectionInterval: any = null;
   private running = false;
 
-  // Face-api.js se carga dinámicamente
   private faceapi: any = null;
   private modelsLoaded = false;
 
@@ -28,14 +27,12 @@ export class CameraTrackingService {
   private fueraDeEncuadreStart: number | null = null;
   private desvioMiradaStart: number | null = null;
 
-  // Flags para evitar múltiples alertas por el mismo evento continuo
   private alertaFueraEncuadreEmitida = false;
   private alertaDesvioMiradaEmitida = false;
 
   // Umbral en ms (5 segundos)
   private readonly UMBRAL_MS = 5000;
 
-  // Observable para toasts
   toast$ = new Subject<ToastEvent>();
   cameraStatus$ = new Subject<CameraStatus>();
 
@@ -79,9 +76,9 @@ export class CameraTrackingService {
       this.detectionInterval = null;
     }
 
-    // Registrar distracción pendiente si quedó activa
-    this.finalizarDistraccionPendiente('fuera_de_encuadre', this.fueraDeEncuadreStart);
-    this.finalizarDistraccionPendiente('desvio_mirada', this.desvioMiradaStart);
+    // Actualizar duraciones finales de distracciones pendientes
+    this.actualizarDuracionFinalSiCorresponde('fuera_de_encuadre', this.fueraDeEncuadreStart, this.alertaFueraEncuadreEmitida);
+    this.actualizarDuracionFinalSiCorresponde('desvio_mirada', this.desvioMiradaStart, this.alertaDesvioMiradaEmitida);
 
     if (this.stream) {
       this.stream.getTracks().forEach(track => track.stop());
@@ -114,11 +111,15 @@ export class CameraTrackingService {
     }
   }
 
+  // ── FIX: CDN UNIFICADO con @vladmandic/face-api ──
   private async cargarFaceApi(): Promise<void> {
     if (this.modelsLoaded) return;
 
-    // Cargar face-api.js desde CDN
-    await this.cargarScript('https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js');
+    // Usar @vladmandic/face-api para TODO (librería + modelos)
+    await this.cargarScript(
+      'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js'
+    );
+
     this.faceapi = (window as any).faceapi;
 
     if (!this.faceapi) {
@@ -126,18 +127,31 @@ export class CameraTrackingService {
       return;
     }
 
+    // Modelos del MISMO repositorio que la librería
     const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model/';
 
-    await Promise.all([
-      this.faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-      this.faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL)
-    ]);
-
-    this.modelsLoaded = true;
+    try {
+      // Cargar tinyFaceDetector + faceLandmark68TinyNet (compatibles)
+      await this.faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+      await this.faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL);
+      this.modelsLoaded = true;
+      console.log('Modelos de face-api cargados correctamente');
+    } catch (err) {
+      console.error('Error cargando modelos face-api:', err);
+      // Fallback: solo detector de rostro sin landmarks
+      try {
+        await this.faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+        this.modelsLoaded = true;
+        console.log('Modelo tinyFaceDetector cargado (fallback sin landmarks)');
+      } catch (err2) {
+        console.error('No se pudieron cargar los modelos:', err2);
+      }
+    }
   }
 
   private cargarScript(src: string): Promise<void> {
     return new Promise((resolve, reject) => {
+      // Evitar cargar el mismo script dos veces
       if (document.querySelector(`script[src="${src}"]`)) {
         resolve();
         return;
@@ -154,23 +168,41 @@ export class CameraTrackingService {
     if (this.running) return;
     this.running = true;
 
-    // Detección cada 500ms
     this.detectionInterval = setInterval(async () => {
       if (!this.running || !this.videoElement || !this.faceapi || !this.modelsLoaded) return;
 
       try {
-        const detections = await this.faceapi
-          .detectAllFaces(this.videoElement, new this.faceapi.TinyFaceDetectorOptions({
-            inputSize: 224,
-            scoreThreshold: 0.4
-          }))
-          .withFaceLandmarks(true);
+        const options = new this.faceapi.TinyFaceDetectorOptions({
+          inputSize: 224,
+          scoreThreshold: 0.5
+        });
+
+        let detections: any[] = [];
+        
+        // Verificar si tenemos landmarks disponibles
+        const hasLandmarks = this.faceapi.nets.faceLandmark68TinyNet?.isLoaded;
+        
+        if (hasLandmarks) {
+          try {
+            detections = await this.faceapi
+              .detectAllFaces(this.videoElement, options)
+              .withFaceLandmarks(true);
+          } catch (e) {
+            // Fallback: solo detección de rostro
+            const rawDetections = await this.faceapi.detectAllFaces(this.videoElement, options);
+            detections = rawDetections.map((d: any) => ({ detection: d, landmarks: null }));
+          }
+        } else {
+          // Solo detección de rostro sin landmarks
+          const rawDetections = await this.faceapi.detectAllFaces(this.videoElement, options);
+          detections = rawDetections.map((d: any) => ({ detection: d, landmarks: null }));
+        }
 
         this.ngZone.run(() => {
           this.procesarDetecciones(detections);
         });
       } catch (e) {
-        // Silenciar errores de detección intermitentes
+        // Silenciar errores intermitentes
       }
     }, 500);
   }
@@ -179,21 +211,25 @@ export class CameraTrackingService {
     const ahora = Date.now();
 
     if (!detections || detections.length === 0) {
-      // No se detectó rostro
+      // Criterio ⑥: no se detecta rostro → fuera de encuadre
       this.procesarFueraDeEncuadre(ahora);
-      // Si no hay rostro, resetear desvío de mirada
       this.resetDesvioMirada();
     } else {
-      // Rostro detectado
+      // Rostro detectado → resetear fuera de encuadre
       this.resetFueraDeEncuadre();
 
-      // Analizar dirección de la mirada
-      const landmarks = detections[0].landmarks;
-      const mirandoPantalla = this.analizarMirada(landmarks);
+      // Criterio ④ y ⑤: analizar dirección de mirada
+      const landmarks = detections[0]?.landmarks ?? null;
 
-      if (!mirandoPantalla) {
-        this.procesarDesvioMirada(ahora);
+      if (landmarks && landmarks.getNose && landmarks.getJawOutline) {
+        const mirandoPantalla = this.analizarMirada(landmarks);
+        if (!mirandoPantalla) {
+          this.procesarDesvioMirada(ahora);
+        } else {
+          this.resetDesvioMirada();
+        }
       } else {
+        // Sin landmarks disponibles: solo detectamos presencia, no mirada
         this.resetDesvioMirada();
       }
     }
@@ -210,35 +246,29 @@ export class CameraTrackingService {
 
       if (!nose || !jaw || !leftEye || !rightEye) return true;
 
-      // Centro de la nariz
-      const noseTop = nose[0];
       const noseTip = nose[3] || nose[nose.length - 1];
-
-      // Centro del rostro horizontal (basado en jaw)
       const jawLeft = jaw[0];
       const jawRight = jaw[jaw.length - 1];
       const faceCenterX = (jawLeft.x + jawRight.x) / 2;
       const faceWidth = Math.abs(jawRight.x - jawLeft.x);
 
-      // Si la nariz está muy desviada del centro del rostro, el usuario mira a un lado
       const desvioHorizontal = Math.abs(noseTip.x - faceCenterX) / (faceWidth || 1);
 
-      // Calcular inclinación vertical
       const eyeCenterY = (leftEye[0].y + rightEye[0].y) / 2;
       const faceHeight = Math.abs(noseTip.y - eyeCenterY);
       const desvioVertical = (noseTip.y - eyeCenterY) / (faceHeight || 1);
 
-      // Umbrales: si desvía mucho horizontal o vertical, no mira la pantalla
       const mirandoHorizontal = desvioHorizontal < 0.38;
       const mirandoVertical = desvioVertical > 0 && desvioVertical < 2.5;
 
       return mirandoHorizontal && mirandoVertical;
-    } catch {
-      return true; // En caso de error, asumir que mira
+    } catch (e) {
+      console.warn('Error analizando mirada:', e);
+      return true;
     }
   }
 
-  // ── Fuera de encuadre ──
+  // ── Fuera de encuadre (Criterio ⑥) ──
   private procesarFueraDeEncuadre(ahora: number): void {
     if (this.fueraDeEncuadreStart === null) {
       this.fueraDeEncuadreStart = ahora;
@@ -247,10 +277,14 @@ export class CameraTrackingService {
 
     const duracion = ahora - this.fueraDeEncuadreStart;
 
+    // Criterio ⑥: Solo registrar si supera los 5 segundos
     if (duracion >= this.UMBRAL_MS && !this.alertaFueraEncuadreEmitida) {
       this.alertaFueraEncuadreEmitida = true;
+      
+      // Registrar evento con duración actual (5 segundos o más)
       this.distractionLog.registrarEvento('fuera_de_encuadre', duracion / 1000);
 
+      // Criterio ⑪: mensaje exacto
       this.toast$.next({
         tipo: 'fuera_de_encuadre',
         mensaje: 'No se detecta tu rostro',
@@ -261,17 +295,18 @@ export class CameraTrackingService {
 
   private resetFueraDeEncuadre(): void {
     if (this.fueraDeEncuadreStart !== null) {
-      if (this.alertaFueraEncuadreEmitida) {
-        // Actualizar duración final
-        const duracionFinal = (Date.now() - this.fueraDeEncuadreStart) / 1000;
+      // Solo actualizar si la duración superó los 5s Y se emitió alerta
+      const duracionTotal = (Date.now() - this.fueraDeEncuadreStart) / 1000;
+      if (this.alertaFueraEncuadreEmitida && duracionTotal >= 5) {
         const eventos = this.distractionLog.getEventosPorTipo('fuera_de_encuadre');
         if (eventos.length > 0) {
-          eventos[eventos.length - 1].duracion_segundos = Math.round(duracionFinal);
+          eventos[eventos.length - 1].duracion_segundos = Math.round(duracionTotal);
         }
       }
       this.fueraDeEncuadreStart = null;
       this.alertaFueraEncuadreEmitida = false;
 
+      // Criterio ⑫: descartar toast cuando usuario retoma encuadre
       this.toast$.next({
         tipo: 'fuera_de_encuadre',
         mensaje: '',
@@ -280,7 +315,7 @@ export class CameraTrackingService {
     }
   }
 
-  // ── Desvío de mirada ──
+  // ── Desvío de mirada (Criterio ⑤) ──
   private procesarDesvioMirada(ahora: number): void {
     if (this.desvioMiradaStart === null) {
       this.desvioMiradaStart = ahora;
@@ -289,10 +324,14 @@ export class CameraTrackingService {
 
     const duracion = ahora - this.desvioMiradaStart;
 
+    // Criterio ⑤: Solo registrar si supera los 5 segundos
     if (duracion >= this.UMBRAL_MS && !this.alertaDesvioMiradaEmitida) {
       this.alertaDesvioMiradaEmitida = true;
+      
+      // Registrar evento con duración actual (5 segundos o más)
       this.distractionLog.registrarEvento('desvio_mirada', duracion / 1000);
 
+      // Criterio ⑪: mensaje exacto
       this.toast$.next({
         tipo: 'desvio_mirada',
         mensaje: 'Desvío de mirada detectado',
@@ -303,16 +342,18 @@ export class CameraTrackingService {
 
   private resetDesvioMirada(): void {
     if (this.desvioMiradaStart !== null) {
-      if (this.alertaDesvioMiradaEmitida) {
-        const duracionFinal = (Date.now() - this.desvioMiradaStart) / 1000;
+      // Solo actualizar si la duración superó los 5s Y se emitió alerta
+      const duracionTotal = (Date.now() - this.desvioMiradaStart) / 1000;
+      if (this.alertaDesvioMiradaEmitida && duracionTotal >= 5) {
         const eventos = this.distractionLog.getEventosPorTipo('desvio_mirada');
         if (eventos.length > 0) {
-          eventos[eventos.length - 1].duracion_segundos = Math.round(duracionFinal);
+          eventos[eventos.length - 1].duracion_segundos = Math.round(duracionTotal);
         }
       }
       this.desvioMiradaStart = null;
       this.alertaDesvioMiradaEmitida = false;
 
+      // Criterio ⑫: descartar toast cuando usuario retoma la mirada
       this.toast$.next({
         tipo: 'desvio_mirada',
         mensaje: '',
@@ -321,14 +362,13 @@ export class CameraTrackingService {
     }
   }
 
-  private finalizarDistraccionPendiente(tipo: DistractionType, startTime: number | null): void {
-    if (startTime !== null) {
-      const duracion = (Date.now() - startTime) / 1000;
-      if (duracion >= 5) {
-        // Actualizar duración final del último evento de este tipo
+  private actualizarDuracionFinalSiCorresponde(tipo: DistractionType, startTime: number | null, alertaEmitida: boolean): void {
+    if (startTime !== null && alertaEmitida) {
+      const duracionFinal = (Date.now() - startTime) / 1000;
+      if (duracionFinal >= 5) {
         const eventos = this.distractionLog.getEventosPorTipo(tipo);
         if (eventos.length > 0) {
-          eventos[eventos.length - 1].duracion_segundos = Math.round(duracion);
+          eventos[eventos.length - 1].duracion_segundos = Math.round(duracionFinal);
         }
       }
     }
