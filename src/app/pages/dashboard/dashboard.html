@@ -164,7 +164,7 @@
           </button>
         }
 
-        @if (sesionTerminada && !mostrarModal) {
+        @if (sesionTerminada && !_mostrarModal) {
           <button
             class="btn-session btn-start"
             (click)="nuevaSesion()">
@@ -226,7 +226,7 @@
 </div>
 
 <!-- Modal de completado -->
-@if (mostrarModal) {
+@if (_mostrarModal) {
   <div class="modal-overlay" (click)="cerrarModal()">
     <div class="modal-content" (click)="$event.stopPropagation()">
       <div class="confetti-container">

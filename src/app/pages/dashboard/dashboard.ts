@@ -1,9 +1,10 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, ViewChild, ElementRef } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { Subscription } from 'rxjs'; 
+import { Subscription } from 'rxjs';
 import { CameraTrackingService, CameraStatus, ToastEvent } from '../../core/services/camera-tracking.service';
-import { DistractionLogService, DistractionEvent } from '../../core/services/distracion-log.service';
+import { DistractionLogService } from '../../core/services/distracion-log.service';
 import { FocusService } from '../../core/services/focus.service';
+import { TimerService } from '../../core/services/timer.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -16,41 +17,20 @@ export class Dashboard implements OnInit, OnDestroy {
   @ViewChild('videoEl') videoRef!: ElementRef<HTMLVideoElement>;
   @ViewChild('canvasEl') canvasRef!: ElementRef<HTMLCanvasElement>;
 
-  timerDisplay = '00:00:00';
   loading = false;
   error = '';
 
-  sesionActiva = false;
-  pausado = false;
-  sesionTerminada = false;
-  mostrarModal = false;
-
-  tiempoRestante = 0;
-  tiempoTotal = 0;
-  duracionMinutos = 45;
-  modoTexto = 'No configurado';
-
-  horaInicio = '';
-  horaFin = '';
-
-  confettiPieces: { left: string; delay: string; duration: string; color: string }[] = [];
-
-  // Camera tracking
   cameraStatus: CameraStatus = 'idle';
   cameraPermisoDenegado = false;
 
-  // Toast de distracciones
   toasts: { tipo: string; mensaje: string; visible: boolean; autoCloseTimer?: any }[] = [];
 
-  // Registro para mostrar en la UI
   ultimoEventoTimestamp = '';
   ultimoEventoTipo = '';
   totalDistracciones = 0;
 
-  // ID de sesión activa en backend
-  private sessionIdBackend: number | null = null;
+  confettiPieces: { left: string; delay: string; duration: string; color: string }[] = [];
 
-  private interval: any;
   private toastSub!: Subscription;
   private statusSub!: Subscription;
 
@@ -59,13 +39,45 @@ export class Dashboard implements OnInit, OnDestroy {
     private cdr: ChangeDetectorRef,
     private cameraTracking: CameraTrackingService,
     private distractionLog: DistractionLogService,
-    private focusService: FocusService
+    private focusService: FocusService,
+    public timerSvc: TimerService
   ) {}
+
+  // Getters que apuntan al servicio
+  get timerDisplay()     { return this.timerSvc.timerDisplay; }
+  get sesionActiva()     { return this.timerSvc.state.sesionActiva; }
+  get pausado()          { return this.timerSvc.state.pausado; }
+  get sesionTerminada()  { return this.timerSvc.state.sesionTerminada; }
+  get mostrarModal()     { return this.timerSvc.state.sesionTerminada && this.timerSvc.state.tiempoRestante <= 0; }
+  get tiempoRestante()   { return this.timerSvc.state.tiempoRestante; }
+  get duracionMinutos()  { return this.timerSvc.state.duracionMinutos; }
+  get modoTexto()        { return this.timerSvc.state.modoTexto; }
+  get horaInicio()       { return this.timerSvc.state.horaInicio; }
+  get horaFin()          { return this.timerSvc.state.horaFin; }
+
+  // Para el modal de completado (reemplaza mostrarModal del template)
+  _mostrarModal = false;
 
   ngOnInit() {
     this.cargarPreferencias();
-    this.actualizarDisplay();
-    this.verificarSesionExistente();
+
+    // Si había sesión activa antes de navegar, rearrancar el interval
+    if (this.timerSvc.state.sesionActiva && !this.timerSvc.state.pausado) {
+      this.timerSvc.iniciarTimer(
+        () => this.cdr.detectChanges(),
+        () => this.endSession()
+      );
+
+      // Rearrancar cámara tras render del <video>
+      setTimeout(async () => {
+        const videoEl = this.videoRef?.nativeElement;
+        const canvasEl = this.canvasRef?.nativeElement;
+        if (videoEl && canvasEl) {
+          await this.cameraTracking.iniciar(videoEl, canvasEl);
+          this.cdr.detectChanges();
+        }
+      }, 200);
+    }
 
     this.toastSub = this.cameraTracking.toast$.subscribe((event: ToastEvent) => {
       this.manejarToast(event);
@@ -87,71 +99,49 @@ export class Dashboard implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    this.limpiarInterval();
-    this.cameraTracking.detener();
+    // NO limpiar el interval aquí — el servicio lo mantiene vivo
+    // Solo desuscribirse de observables del componente
     this.toastSub?.unsubscribe();
     this.statusSub?.unsubscribe();
   }
 
-  // NUEVO: Verificar si ya hay una sesión activa en el backend
-  private verificarSesionExistente() {
-    this.focusService.getActiveSession().subscribe({
-      next: (session) => {
-        if (session && session.id) {
-          // Ya hay una sesión activa, no permitir iniciar otra
-          this.sesionActiva = true;
-          this.sessionIdBackend = session.id;
-          this.error = 'Ya hay una sesión activa. Finalízala antes de iniciar una nueva.';
-          this.cdr.detectChanges();
-        }
-      },
-      error: () => {
-        // No hay sesión activa, todo bien
-        console.log('No hay sesión activa');
-      }
+  cargarPreferencias() {
+    // Solo cargar si no hay sesión activa (no pisar el estado del timer)
+    if (this.timerSvc.state.sesionActiva) return;
+
+    const prefs = this.focusService.getPreferenciasLocal();
+    const duracion = prefs ? Number(prefs.duration) || 45 : 45;
+    const modosMap: Record<string, string> = {
+      'tranquilo': 'Tranquilo',
+      'alerta': 'Alerta',
+      'absoluta': 'Concentración absoluta'
+    };
+    const modo = prefs ? (modosMap[prefs.mode] || 'No configurado') : 'Tranquilo';
+
+    this.timerSvc.setEstadoSesion({
+      duracionMinutos: duracion,
+      modoTexto: modo,
+      tiempoTotal: duracion * 60,
+      tiempoRestante: duracion * 60
     });
   }
 
-  cargarPreferencias() {
-    const prefs = this.focusService.getPreferenciasLocal();
-    if (prefs) {
-      this.duracionMinutos = Number(prefs.duration) || 45;
-      const modosMap: Record<string, string> = {
-        'tranquilo': 'Tranquilo',
-        'alerta': 'Alerta',
-        'absoluta': 'Concentración absoluta'
-      };
-      this.modoTexto = modosMap[prefs.mode] || 'No configurado';
-    } else {
-      // Valores por defecto
-      this.duracionMinutos = 45;
-      this.modoTexto = 'Tranquilo';
-    }
-    this.tiempoTotal = this.duracionMinutos * 60;
-    this.tiempoRestante = this.tiempoTotal;
-  }
-
   async startSession() {
-    // Validar que no haya sesión activa
-    if (this.loading || this.sesionActiva) {
+    if (this.loading || this.timerSvc.state.sesionActiva) {
       this.error = 'Ya hay una sesión activa. Finalízala primero.';
       return;
     }
 
-    // Verificar nuevamente en backend
     try {
       const activeSession = await this.focusService.getActiveSession().toPromise();
       if (activeSession && activeSession.id) {
         this.error = 'Ya hay una sesión activa en el servidor.';
-        this.sesionActiva = true;
-        this.sessionIdBackend = activeSession.id;
+        this.timerSvc.setEstadoSesion({ sesionActiva: true, sessionIdBackend: activeSession.id });
         this.loading = false;
         this.cdr.detectChanges();
         return;
       }
-    } catch (err) {
-      // No hay sesión activa, continuar
-    }
+    } catch (err) {}
 
     this.loading = true;
     this.error = '';
@@ -161,19 +151,17 @@ export class Dashboard implements OnInit, OnDestroy {
     this.ultimoEventoTimestamp = '';
     this.ultimoEventoTipo = '';
 
-    // Esperar un tick para que el template renderice el <video>
-    this.sesionActiva = true;
+    this.timerSvc.setEstadoSesion({ sesionActiva: true });
     this.cdr.detectChanges();
 
     await new Promise(resolve => setTimeout(resolve, 100));
 
-    // Solicitar acceso a la cámara
     const videoEl = this.videoRef?.nativeElement;
     const canvasEl = this.canvasRef?.nativeElement;
 
     if (!videoEl || !canvasEl) {
       this.error = 'No se encontró el elemento de video.';
-      this.sesionActiva = false;
+      this.timerSvc.setEstadoSesion({ sesionActiva: false });
       this.loading = false;
       this.cdr.detectChanges();
       return;
@@ -183,81 +171,81 @@ export class Dashboard implements OnInit, OnDestroy {
 
     if (!cameraOk) {
       this.cameraPermisoDenegado = true;
-      this.error = 'No se puede iniciar la sesión sin acceso a la cámara. Permite el acceso e intenta de nuevo.';
-      this.sesionActiva = false;
+      this.error = 'No se puede iniciar la sesión sin acceso a la cámara.';
+      this.timerSvc.setEstadoSesion({ sesionActiva: false });
       this.loading = false;
       this.cdr.detectChanges();
       return;
     }
 
-    // Crear sesión en el backend
     try {
       const newSession = await this.focusService.startSessionWithDuration(this.duracionMinutos).toPromise();
       if (newSession && newSession.id) {
-        this.sessionIdBackend = newSession.id;
+        this.timerSvc.setEstadoSesion({ sessionIdBackend: newSession.id });
       }
-    } catch (err) {
-      console.error('Error al crear sesión en backend:', err);
-      // Continuamos igual, pero sin ID de backend
-    }
+    } catch (err) {}
 
-    this.pausado = false;
-    this.sesionTerminada = false;
-    this.mostrarModal = false;
-    this.tiempoRestante = this.tiempoTotal;
-    this.horaInicio = this.formatearFecha(new Date());
-    this.horaFin = '';
+    const horaInicio = this.formatearFecha(new Date());
+    this.timerSvc.setEstadoSesion({
+      pausado: false,
+      sesionTerminada: false,
+      tiempoRestante: this.timerSvc.state.tiempoTotal,
+      horaInicio,
+      horaFin: ''
+    });
 
-    this.arrancarTimer();
+    this.timerSvc.iniciarTimer(
+      () => this.cdr.detectChanges(),
+      () => this.endSession()
+    );
+
     this.loading = false;
+    this._mostrarModal = false;
     this.cdr.detectChanges();
   }
 
   togglePausa() {
-    if (!this.sesionActiva || this.sesionTerminada) return;
+    if (!this.timerSvc.state.sesionActiva || this.timerSvc.state.sesionTerminada) return;
 
-    if (!this.pausado) {
-      this.pausado = true;
-      this.limpiarInterval();
+    if (!this.timerSvc.state.pausado) {
+      this.timerSvc.pausarTimer();
       this.cameraTracking.pausar();
     } else {
-      this.pausado = false;
-      this.arrancarTimer();
+      this.timerSvc.reanudarTimer(
+        () => this.cdr.detectChanges(),
+        () => this.endSession()
+      );
       this.cameraTracking.reanudar();
     }
+    this.cdr.detectChanges();
   }
 
   async endSession() {
-    if (!this.sesionActiva || this.loading) return;
+    if (!this.timerSvc.state.sesionActiva || this.loading) return;
 
     this.loading = true;
-    this.limpiarInterval();
+    this.timerSvc.limpiarInterval();
     this.cameraTracking.detener();
 
-    this.horaFin = this.formatearFecha(new Date());
-    const completada = this.tiempoRestante <= 0;
+    const horaFin = this.formatearFecha(new Date());
+    const completada = this.timerSvc.state.tiempoRestante <= 0;
 
-    // Finalizar sesión en backend si existe
-    if (this.sessionIdBackend) {
+    if (this.timerSvc.state.sessionIdBackend) {
       try {
-        await this.focusService.endSession(this.sessionIdBackend).toPromise();
-      } catch (err) {
-        console.error('Error al finalizar sesión en backend:', err);
-      }
-      this.sessionIdBackend = null;
+        await this.focusService.endSession(this.timerSvc.state.sessionIdBackend).toPromise();
+      } catch (err) {}
     }
 
-    // Sincronizar distracciones
     const distraccionesData = this.distractionLog.sincronizarAlFinalizar();
 
     const sesion = {
       id: 'session_' + Date.now(),
       start_time: this.horaInicio,
-      end_time: this.horaFin,
+      end_time: horaFin,
       modo: this.modoTexto,
       duracion_configurada: this.duracionMinutos,
-      tiempo_usado_segundos: this.tiempoTotal - this.tiempoRestante,
-      completada: completada,
+      tiempo_usado_segundos: this.timerSvc.state.tiempoTotal - this.timerSvc.state.tiempoRestante,
+      completada,
       distracciones: distraccionesData.eventos,
       total_distracciones: distraccionesData.total
     };
@@ -265,58 +253,50 @@ export class Dashboard implements OnInit, OnDestroy {
     const historial = JSON.parse(localStorage.getItem('focus_session_history') || '[]');
     historial.push(sesion);
     localStorage.setItem('focus_session_history', JSON.stringify(historial));
-
-    // Guardar distracciones aparte
     this.distractionLog.guardarEnLocalStorage(sesion.id);
 
-    this.sesionActiva = false;
-    this.pausado = false;
-    this.sesionTerminada = true;
-    this.loading = false;
+    this.timerSvc.setEstadoSesion({
+      sesionActiva: false,
+      pausado: false,
+      sesionTerminada: true,
+      horaFin,
+      sessionIdBackend: null
+    });
 
-    // Limpiar toasts
+    this.loading = false;
     this.toasts = [];
 
     if (completada) {
       this.generarConfetti();
-      this.mostrarModal = true;
+      this._mostrarModal = true;
     }
 
     this.cdr.detectChanges();
   }
 
   nuevaSesion() {
-    this.limpiarInterval();
     this.cameraTracking.detener();
-    this.sesionActiva = false;
-    this.pausado = false;
-    this.sesionTerminada = false;
-    this.mostrarModal = false;
-    this.horaInicio = '';
-    this.horaFin = '';
+    this.timerSvc.resetear();
     this.cameraStatus = 'idle';
     this.cameraPermisoDenegado = false;
     this.toasts = [];
     this.totalDistracciones = 0;
     this.ultimoEventoTimestamp = '';
     this.ultimoEventoTipo = '';
-    this.sessionIdBackend = null;
     this.error = '';
+    this._mostrarModal = false;
     this.cargarPreferencias();
-    this.actualizarDisplay();
     this.cdr.detectChanges();
   }
 
   cerrarModal() {
-    this.mostrarModal = false;
+    this._mostrarModal = false;
     this.nuevaSesion();
   }
 
   cerrarToast(index: number) {
     if (this.toasts[index]) {
-      if (this.toasts[index].autoCloseTimer) {
-        clearTimeout(this.toasts[index].autoCloseTimer);
-      }
+      if (this.toasts[index].autoCloseTimer) clearTimeout(this.toasts[index].autoCloseTimer);
       this.toasts.splice(index, 1);
       this.cdr.detectChanges();
     }
@@ -324,88 +304,36 @@ export class Dashboard implements OnInit, OnDestroy {
 
   logout() {
     this.cameraTracking.detener();
+    this.timerSvc.limpiarInterval();
     this.router.navigate(['/login']);
   }
 
   private manejarToast(event: ToastEvent): void {
     if (event.visible) {
-      // Verificar si ya hay un toast del mismo tipo activo
       const existente = this.toasts.findIndex(t => t.tipo === event.tipo);
-      if (existente >= 0) return; // Ya hay uno activo
-
-      const toast = {
-        tipo: event.tipo,
-        mensaje: event.mensaje,
-        visible: true,
-        autoCloseTimer: null as any
-      };
-
-      // Auto-cerrar después de 6 segundos
+      if (existente >= 0) return;
+      const toast = { tipo: event.tipo, mensaje: event.mensaje, visible: true, autoCloseTimer: null as any };
       toast.autoCloseTimer = setTimeout(() => {
         const idx = this.toasts.indexOf(toast);
-        if (idx >= 0) {
-          this.toasts.splice(idx, 1);
-          this.cdr.detectChanges();
-        }
+        if (idx >= 0) { this.toasts.splice(idx, 1); this.cdr.detectChanges(); }
       }, 6000);
-
       this.toasts.push(toast);
     } else {
-      // Remover toast del tipo correspondiente
       const idx = this.toasts.findIndex(t => t.tipo === event.tipo);
       if (idx >= 0) {
-        if (this.toasts[idx].autoCloseTimer) {
-          clearTimeout(this.toasts[idx].autoCloseTimer);
-        }
+        if (this.toasts[idx].autoCloseTimer) clearTimeout(this.toasts[idx].autoCloseTimer);
         this.toasts.splice(idx, 1);
       }
     }
   }
 
-  private arrancarTimer() {
-    this.limpiarInterval();
-    this.interval = setInterval(() => {
-      if (this.tiempoRestante > 0) {
-        this.tiempoRestante--;
-        this.actualizarDisplay();
-      }
-      if (this.tiempoRestante <= 0) {
-        this.endSession();
-      }
-      this.cdr.detectChanges();
-    }, 1000);
-  }
-
-  private limpiarInterval() {
-    if (this.interval) {
-      clearInterval(this.interval);
-      this.interval = null;
-    }
-  }
-
-  private actualizarDisplay() {
-    const h = Math.floor(this.tiempoRestante / 3600);
-    const m = Math.floor((this.tiempoRestante % 3600) / 60);
-    const s = this.tiempoRestante % 60;
-    this.timerDisplay = `${this.pad(h)}:${this.pad(m)}:${this.pad(s)}`;
-  }
-
-  private pad(n: number): string {
-    return n.toString().padStart(2, '0');
-  }
-
   private formatearFecha(date: Date): string {
-    const y = date.getFullYear();
-    const mo = this.pad(date.getMonth() + 1);
-    const d = this.pad(date.getDate());
-    const h = this.pad(date.getHours());
-    const mi = this.pad(date.getMinutes());
-    const s = this.pad(date.getSeconds());
-    return `${y}-${mo}-${d} ${h}:${mi}:${s}`;
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
   }
 
   private generarConfetti() {
-    const colores = ['#7c3aed', '#a78bfa', '#c4b5fd', '#10b981', '#f59e0b', '#ec4899', '#312e81'];
+    const colores = ['#7c3aed','#a78bfa','#c4b5fd','#10b981','#f59e0b','#ec4899','#312e81'];
     this.confettiPieces = Array.from({ length: 50 }, () => ({
       left: Math.random() * 100 + '%',
       delay: Math.random() * 2 + 's',

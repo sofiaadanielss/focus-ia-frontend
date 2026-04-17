@@ -19,11 +19,13 @@
           "options": {
             "browser": "src/main.ts",
             "tsConfig": "tsconfig.app.json",
-            "assets":  [
+            "assets": [
               {
                 "glob": "**/*",
-                "input": "src/assets"
-              }
+                "input": "src/assets",
+                "output": "assets"
+              },
+              "src/favicon.ico"
             ],
             "styles": ["src/styles.css"]
           },
