@@ -24,6 +24,7 @@
           type="text"
           [class.input-error]="emailError()"
           (blur)="validateEmail()"
+          [disabled]="isLocked()"
         />
         @if (emailError()) {
           <span class="error-msg">{{ emailError() }}</span>
@@ -40,8 +41,9 @@
             [type]="showPassword() ? 'text' : 'password'"
             [class.input-error]="passwordError()"
             (blur)="validatePassword()"
+            [disabled]="isLocked()"
           />
-          <button type="button" class="toggle-eye" (click)="togglePassword()">
+          <button type="button" class="toggle-eye" (click)="togglePassword()" [disabled]="isLocked()">
             <lucide-icon 
               [img]="showPassword() ? EyeOff : Eye" 
               size="16" 
@@ -52,7 +54,7 @@
         @if (passwordError()) {
           <span class="error-msg">{{ passwordError() }}</span>
         }
-        <a href="#" class="forgot-link">Olvidé mi contraseña</a>
+        <a href="#" class="forgot-link" [class.disabled-link]="isLocked()">Olvidé mi contraseña</a>
       </div>
 
       <button
@@ -61,7 +63,13 @@
         [disabled]="isSubmitDisabled()"
         [class.btn-disabled]="isSubmitDisabled()"
       >
-        {{ loading() ? 'Iniciando...' : 'Iniciar Sesión' }}
+        @if (isLocked()) {
+          Bloqueado ({{ lockRemainingSeconds() }}s)
+        } @else if (loading()) {
+          Iniciando...
+        } @else {
+          Iniciar Sesión
+        }
       </button>
 
       @if (serverError()) {
@@ -75,7 +83,7 @@
     </form>
 
     <p class="register-link">
-      No tienes cuenta? <a routerLink="/register">Crear Cuenta</a>
+      No tienes cuenta? <a routerLink="/register" [class.disabled-link]="isLocked()">Crear Cuenta</a>
     </p>
 
   </div>
