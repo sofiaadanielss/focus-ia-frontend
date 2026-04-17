@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -25,7 +25,10 @@ export class Profile implements OnInit {
   successMessage = '';
   loading = false;
 
-  constructor(private router: Router, private authService: AuthService) {}
+  constructor(
+    private router: Router, 
+    private authService: AuthService,
+    private cdr: ChangeDetectorRef ) {}
 
   ngOnInit() {
     if (!this.authService.isLoggedIn()) {
@@ -44,9 +47,8 @@ export class Profile implements OnInit {
         this.email = user.email;
         this.currentName = this.fullName || this.username;
         this.password = '';
-        
-        // Debug: ver qué datos llegan
-        console.log('Perfil cargado:', user);
+
+        this.cdr.markForCheck();
       },
       error: (err) => {
         console.error('Error loading profile:', err);
@@ -56,6 +58,7 @@ export class Profile implements OnInit {
         } else {
           this.serverError = 'No se pudo cargar el perfil.';
         }
+        this.cdr.markForCheck(); 
       }
     });
   }
