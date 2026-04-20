@@ -16,19 +16,32 @@ export class Profile implements OnInit {
   fullName = '';
   username = '';
   email = '';
-  password = '';
-  
+
+  // Panel cambio de contraseña
+  showPasswordPanel = false;
+  currentPassword = '';
+  newPassword = '';
+  confirmPassword = '';
+  currentPasswordError = '';
+  newPasswordError = '';
+  confirmPasswordError = '';
+  loadingPassword = false;
+
+  // Visibilidad de contraseñas
+  showCurrentPassword = false;
+  showNewPassword = false;
+  showConfirmPassword = false;
+
   fullNameError = '';
   usernameError = '';
-  passwordError = '';
   serverError = '';
   successMessage = '';
   loading = false;
 
   constructor(
-    private router: Router, 
+    private router: Router,
     private authService: AuthService,
-    private cdr: ChangeDetectorRef ) {}
+    private cdr: ChangeDetectorRef) {}
 
   ngOnInit() {
     if (!this.authService.isLoggedIn()) {
@@ -41,13 +54,10 @@ export class Profile implements OnInit {
   private loadProfile() {
     this.authService.getProfile().subscribe({
       next: (user: UserProfile) => {
-        // Mapear los campos según lo que devuelve el backend
         this.fullName = (user as any).full_name || user.name || '';
         this.username = (user as any).username || user.name || '';
         this.email = user.email;
         this.currentName = this.fullName || this.username;
-        this.password = '';
-
         this.cdr.markForCheck();
       },
       error: (err) => {
@@ -58,7 +68,7 @@ export class Profile implements OnInit {
         } else {
           this.serverError = 'No se pudo cargar el perfil.';
         }
-        this.cdr.markForCheck(); 
+        this.cdr.markForCheck();
       }
     });
   }
@@ -68,7 +78,6 @@ export class Profile implements OnInit {
       (!this.fullName && !this.username) ||
       !!this.fullNameError ||
       !!this.usernameError ||
-      !!this.passwordError ||
       this.loading
     );
   }
@@ -84,27 +93,107 @@ export class Profile implements OnInit {
   }
 
   validateUsername() {
-    if (!this.username.trim()) {
+    const trimmed = this.username.trim();
+    if (!trimmed) {
       this.usernameError = 'El nombre de usuario no puede estar vacío';
-    } else if (this.username.trim().length < 3) {
+    } else if (trimmed.length < 3) {
       this.usernameError = 'El nombre de usuario debe tener al menos 3 caracteres';
-    } else if (!/^[a-zA-Z0-9_]+$/.test(this.username)) {
-      this.usernameError = 'Solo letras, números y guión bajo';
+    } else if (!/^[a-zA-ZñÑ0-9_]+$/.test(trimmed)) {
+      this.usernameError = 'Solo letras (incluida ñ), números y guión bajo. Sin espacios.';
     } else {
       this.usernameError = '';
     }
   }
 
-  validatePassword() {
-    if (this.password && this.password.length > 0) {
-      if (this.password.length < 6) {
-        this.passwordError = 'La contraseña debe tener al menos 6 caracteres';
-      } else {
-        this.passwordError = '';
-      }
-    } else {
-      this.passwordError = '';
+  onUsernameInput(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const clean = input.value.replace(/\s/g, '');
+    if (input.value !== clean) {
+      input.value = clean;
+      this.username = clean;
     }
+    this.clearSuccess();
+  }
+
+  // --- Panel contraseña ---
+  togglePasswordPanel() {
+    this.showPasswordPanel = !this.showPasswordPanel;
+    if (!this.showPasswordPanel) {
+      this.currentPassword = '';
+      this.newPassword = '';
+      this.confirmPassword = '';
+      this.currentPasswordError = '';
+      this.newPasswordError = '';
+      this.confirmPasswordError = '';
+      this.showCurrentPassword = false;
+      this.showNewPassword = false;
+      this.showConfirmPassword = false;
+    }
+  }
+
+  validateNewPassword() {
+    if (!this.newPassword) {
+      this.newPasswordError = 'Ingresa la nueva contraseña';
+    } else if (this.newPassword.length < 8) {
+      this.newPasswordError = 'Mínimo 8 caracteres';
+    } else {
+      this.newPasswordError = '';
+    }
+    this.validateConfirmPassword();
+  }
+
+  validateConfirmPassword() {
+    if (!this.confirmPassword) {
+      this.confirmPasswordError = '';
+    } else if (this.newPassword !== this.confirmPassword) {
+      this.confirmPasswordError = 'Las contraseñas no coinciden';
+    } else {
+      this.confirmPasswordError = '';
+    }
+  }
+
+  onChangePassword() {
+    if (!this.currentPassword) {
+      this.currentPasswordError = 'Ingresa tu contraseña actual';
+      return;
+    } else {
+      this.currentPasswordError = '';
+    }
+    this.validateNewPassword();
+    this.validateConfirmPassword();
+
+    if (this.currentPasswordError || this.newPasswordError || this.confirmPasswordError) return;
+    if (this.newPassword !== this.confirmPassword) {
+      this.confirmPasswordError = 'Las contraseñas no coinciden';
+      return;
+    }
+
+    this.loadingPassword = true;
+    const updateData: UpdateProfileRequest = { password: this.newPassword };
+
+    this.authService.updateProfile(updateData).subscribe({
+      next: () => {
+        this.successMessage = '✅ Contraseña actualizada';
+        this.showPasswordPanel = false;
+        this.currentPassword = '';
+        this.newPassword = '';
+        this.confirmPassword = '';
+        this.showCurrentPassword = false;
+        this.showNewPassword = false;
+        this.showConfirmPassword = false;
+        this.loadingPassword = false;
+        setTimeout(() => { this.successMessage = ''; }, 3000);
+      },
+      error: (err) => {
+        const detail = (err.error?.detail ?? '').toLowerCase();
+        if (detail.includes('password') || detail.includes('incorrect') || detail.includes('invalid')) {
+          this.currentPasswordError = 'Contraseña actual incorrecta';
+        } else {
+          this.serverError = 'Error al cambiar la contraseña';
+        }
+        this.loadingPassword = false;
+      }
+    });
   }
 
   clearSuccess() {
@@ -117,14 +206,10 @@ export class Profile implements OnInit {
   }
 
   onSubmit() {
-    // Validar todos los campos
     this.validateFullName();
     this.validateUsername();
-    this.validatePassword();
-    
-    if (this.fullNameError || this.usernameError || this.passwordError) {
-      return;
-    }
+
+    if (this.fullNameError || this.usernameError) return;
 
     if (!this.fullName.trim() && !this.username.trim()) {
       this.serverError = 'Debes proporcionar al menos nombre completo o nombre de usuario';
@@ -135,58 +220,48 @@ export class Profile implements OnInit {
     this.serverError = '';
     this.successMessage = '';
 
-    // Construir objeto de actualización
     const updateData: UpdateProfileRequest = {};
-    
     if (this.fullName.trim()) {
       updateData.full_name = this.fullName.trim();
       updateData.name = this.fullName.trim();
     }
-    
     if (this.username.trim()) {
       updateData.username = this.username.trim();
-    }
-    
-    if (this.password && this.password.trim()) {
-      updateData.password = this.password.trim();
     }
 
     this.authService.updateProfile(updateData).subscribe({
       next: (user: UserProfile) => {
-        this.currentName = (user as any).full_name || (user as any).username || user.name || this.fullName;
         this.fullName = (user as any).full_name || user.name || this.fullName;
-        this.username = (user as any).username || user.name || this.username;
+        this.username = (user as any).username || this.username;
         this.email = user.email;
-        this.password = '';
-        this.successMessage = '✅ Perfil actualizado';
-        
-        setTimeout(() => {
-          if (this.successMessage === '✅ Perfil actualizado') {
-            this.successMessage = '';
-          }
-        }, 3000);
-        
+        this.currentName = this.fullName || this.username;
+        this.successMessage = '✅ Datos guardados con éxito!';
         this.loading = false;
+        setTimeout(() => { this.successMessage = ''; }, 3000);
+        this.cdr.markForCheck();
       },
       error: (err) => {
         console.error('Error al actualizar perfil:', err);
-        
-        const errorMessage = err.error?.detail || err.error?.message || '';
-        const errorLower = errorMessage.toLowerCase();
-        
-        if (errorLower.includes('email') || errorLower.includes('correo')) {
-          this.serverError = 'No se puede cambiar el correo electrónico';
-        } else if (errorLower.includes('username') || errorLower.includes('nombre de usuario')) {
+        const raw = err.error?.detail;
+        const errorLower = (
+          typeof raw === 'string' ? raw
+          : typeof raw === 'object' && raw !== null ? (raw.code ?? raw.reason ?? JSON.stringify(raw))
+          : ''
+        ).toLowerCase();
+
+        if (errorLower.includes('username')) {
           this.usernameError = 'Este nombre de usuario ya está en uso';
+        } else if (errorLower.includes('email')) {
+          this.serverError = 'No se puede cambiar el correo electrónico';
         } else if (err.status === 401) {
           this.authService.logout();
           this.router.navigate(['/login']);
           return;
         } else {
-          this.serverError = errorMessage || 'Error al guardar los cambios';
+          this.serverError = (typeof raw === 'string' ? raw : '') || 'Error al guardar los cambios';
         }
-        
         this.loading = false;
+        this.cdr.markForCheck();
       }
     });
   }

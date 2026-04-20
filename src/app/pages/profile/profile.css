@@ -8,21 +8,21 @@
 
 .profile-page {
   width: 100vw;
-  height: 100vh;
+  min-height: 100vh;
   background-color: #f3f4f6;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   font-family: 'DM Sans', sans-serif;
-  overflow: hidden;
-  padding: 0 40px 20px;
+  padding: 110px 48px 48px;
   position: relative;
+  zoom: 1.5;
 }
 
 .profile-card {
   width: 100%;
-  max-width: 900px;
+  max-width: 1100px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -30,21 +30,23 @@
 }
 
 .card-header {
-  position: absolute;
-  top: 28px;
-  left: 32px;
-  right: 32px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 20px 40px;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
+  z-index: 10;
+  background-color: #f3f4f6;
 }
-
 
 .brand-section {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 12px;
+  gap: 8px;
 }
 
 .brand {
@@ -70,6 +72,7 @@
   padding: 6px 16px;
   border-radius: 999px;
   animation: fadeIn 0.2s ease;
+  align-self: center;
 }
 
 .back-btn {
@@ -102,55 +105,70 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 36px;
+  margin-bottom: 32px;
 }
 
 .avatar-circle {
-  width: 80px;
-  height: 80px;
+  width: 120px;
+  height: 120px;
   background-color: #ede9fe;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 .avatar-circle svg {
-  width: 46px;
-  height: 46px;
+  width: 70px;
+  height: 70px;
 }
 
 .avatar-name {
-  font-size: 1.4rem;
+  font-size: 2rem;
   font-weight: 700;
   color: #111827;
 }
 
+/* ── Layout del form ─────────────────────────────── */
+
 .profile-form {
   width: 100%;
-  max-width: 360px;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 36px;
+  transition: all 0.2s ease;
 }
 
+/* Columna izquierda */
+.form-main-fields {
+  width: 500px;
+  flex-shrink: 0;
+}
+
+/* ── Campos ─────────────────────────────────────── */
+
 .field {
-  margin-bottom: 18px;
+  margin-bottom: 26px;
   display: flex;
   flex-direction: column;
 }
 
 .field label {
-  font-size: 0.72rem;
-  font-weight: 500;
+  font-size: 0.9rem;
+  font-weight: 600;
   color: #6b7280;
-  margin-bottom: 5px;
+  margin-bottom: 8px;
 }
 
 .field input {
   width: 100%;
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 9px 12px;
-  font-size: 0.875rem;
+  border-radius: 12px;
+  padding: 14px 48px 14px 18px;
+  font-size: 1.05rem;
   font-family: inherit;
   color: #111827;
   background: #ffffff;
@@ -180,31 +198,70 @@
 }
 
 .error-msg {
-  font-size: 0.68rem;
+  font-size: 0.84rem;
   color: #ef4444;
-  margin-top: 3px;
+  margin-top: 5px;
 }
 
 .email-hint {
-  font-size: 0.65rem;
+  font-size: 0.8rem;
   color: #f59e0b;
-  margin-top: 4px;
+  margin-top: 6px;
   display: block;
 }
 
 .password-hint {
-  font-size: 0.65rem;
+  font-size: 0.8rem;
   color: #9ca3af;
-  margin-top: 4px;
+  margin-top: 6px;
   display: block;
 }
 
 .server-error {
-  font-size: 0.72rem;
+  font-size: 0.88rem;
   color: #ef4444;
   text-align: center;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
+
+/* ── Input con ojo ──────────────────────────────── */
+
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-wrapper input {
+  width: 100%;
+  padding-right: 40px;
+}
+
+.eye-btn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  color: #9ca3af;
+  transition: color 0.15s;
+}
+
+.eye-btn:hover {
+  color: #7c3aed;
+}
+
+.eye-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* ── Botones principales ────────────────────────── */
 
 .btn-save {
   width: 100%;
@@ -212,12 +269,12 @@
   color: #fff;
   border: none;
   border-radius: 999px;
-  padding: 14px 0;
-  font-size: 1rem;
+  padding: 18px 0;
+  font-size: 1.1rem;
   font-weight: 700;
   font-family: inherit;
   cursor: pointer;
-  margin-top: 24px;
+  margin-top: 32px;
   transition: background-color 0.15s;
 }
 
@@ -232,12 +289,12 @@
   color: #ef4444;
   border: 2px solid #ef4444;
   border-radius: 999px;
-  padding: 12px 0;
-  font-size: 0.9rem;
+  padding: 16px 0;
+  font-size: 1.05rem;
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  margin-top: 12px;
+  margin-top: 14px;
   transition: all 0.15s;
 }
 
@@ -255,4 +312,98 @@
 
 .btn-save:disabled:hover {
   transform: none;
+}
+
+/* ── Botón toggle contraseña ────────────────────── */
+
+.btn-password-toggle {
+  width: 100%;
+  background-color: transparent;
+  color: #7c3aed;
+  border: 1.5px solid #c4b5fd;
+  border-radius: 999px;
+  padding: 15px 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  margin-top: 4px;
+  margin-bottom: 4px;
+  transition: all 0.15s;
+}
+
+.btn-password-toggle:hover {
+  background-color: #f5f3ff;
+  border-color: #7c3aed;
+}
+
+/* ── Panel de contraseña (columna derecha) ──────── */
+
+.password-panel {
+  background-color: #ede9fe;
+  border-radius: 28px;
+  padding: 36px 36px 32px;
+  animation: fadeIn 0.2s ease;
+  width: 480px;
+  flex-shrink: 0;
+}
+
+.password-panel-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #4c1d95;
+  margin-bottom: 28px;
+}
+
+.password-panel .field label {
+  color: #6d28d9;
+}
+
+.password-panel .field input {
+  background: #ffffff;
+}
+
+/* ── Botón cambiar contraseña ───────────────────── */
+
+.btn-change-password {
+  width: 100%;
+  background-color: #7c3aed;
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 17px 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  margin-top: 12px;
+  transition: background-color 0.15s;
+}
+
+.btn-change-password:hover:not(:disabled) {
+  background-color: #6d28d9;
+}
+
+.btn-change-password:disabled {
+  background-color: #c4b5fd;
+  cursor: not-allowed;
+}
+
+/* ── Responsive ─────────────────────────────────── */
+
+@media (max-width: 1080px) {
+  .profile-form {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .form-main-fields,
+  .password-panel {
+    width: 100%;
+    max-width: 500px;
+  }
+
+  .password-panel {
+    margin-top: 0;
+  }
 }

@@ -29,81 +29,170 @@
       <p class="avatar-name">{{ currentName || 'Usuario' }}</p>
     </div>
 
-    <form (ngSubmit)="onSubmit()" novalidate class="profile-form">
+    <form (ngSubmit)="onSubmit()" novalidate class="profile-form" [class.has-password-panel]="showPasswordPanel">
 
-      <div class="field">
-        <label>Nombre completo</label>
-        <input
-          [(ngModel)]="fullName"
-          name="fullName"
-          type="text"
-          [class.input-error]="fullNameError"
-          (blur)="validateFullName()"
-          (input)="clearSuccess()"
-          placeholder="Tu nombre completo"
-        />
-        <span class="error-msg" *ngIf="fullNameError">{{ fullNameError }}</span>
+      <!-- Columna izquierda: campos principales -->
+      <div class="form-main-fields">
+
+        <div class="field">
+          <label>Nombre de usuario</label>
+          <input
+            [(ngModel)]="username"
+            name="username"
+            type="text"
+            [class.input-error]="usernameError"
+            (blur)="validateUsername()"
+            (input)="onUsernameInput($event)"
+            placeholder="Nombre de usuario"
+          />
+          <span class="error-msg" *ngIf="usernameError">{{ usernameError }}</span>
+        </div>
+
+        <div class="field">
+          <label>Nombre completo</label>
+          <input
+            [(ngModel)]="fullName"
+            name="fullName"
+            type="text"
+            [class.input-error]="fullNameError"
+            (blur)="validateFullName()"
+            (input)="clearSuccess()"
+            placeholder="Tu nombre completo"
+          />
+          <span class="error-msg" *ngIf="fullNameError">{{ fullNameError }}</span>
+        </div>
+
+        <div class="field">
+          <label>Correo Electrónico</label>
+          <input
+            [ngModel]="email"
+            name="email"
+            type="email"
+            disabled
+            class="disabled-input"
+          />
+          <small class="email-hint">El correo electrónico no se puede modificar</small>
+        </div>
+
+        <!-- Botón para mostrar/ocultar panel de contraseña -->
+        <button type="button" class="btn-password-toggle" (click)="togglePasswordPanel()">
+          {{ showPasswordPanel ? 'Cancelar' : '¿Cambiar contraseña?' }}
+        </button>
+
+        <p class="server-error" *ngIf="serverError">{{ serverError }}</p>
+
+        <button
+          type="submit"
+          class="btn-save"
+          [disabled]="isSubmitDisabled()"
+          [class.btn-disabled]="isSubmitDisabled()"
+        >
+          {{ loading ? 'Guardando...' : 'Guardar cambios' }}
+        </button>
+
+        <button
+          type="button"
+          class="btn-logout"
+          (click)="onLogout()"
+        >
+          Cerrar sesión
+        </button>
+
       </div>
 
-      <div class="field">
-        <label>Nombre de usuario</label>
-        <input
-          [(ngModel)]="username"
-          name="username"
-          type="text"
-          [class.input-error]="usernameError"
-          (blur)="validateUsername()"
-          (input)="clearSuccess()"
-          placeholder="Nombre de usuario"
-        />
-        <span class="error-msg" *ngIf="usernameError">{{ usernameError }}</span>
+      <!-- Columna derecha: panel de cambio de contraseña -->
+      <div class="password-panel" *ngIf="showPasswordPanel">
+
+        <p class="password-panel-title">Cambiar contraseña</p>
+
+        <div class="field">
+          <label>Contraseña actual</label>
+          <div class="input-wrapper">
+            <input
+              [(ngModel)]="currentPassword"
+              name="currentPassword"
+              [type]="showCurrentPassword ? 'text' : 'password'"
+              [class.input-error]="currentPasswordError"
+              placeholder=""
+            />
+            <button type="button" class="eye-btn" (click)="showCurrentPassword = !showCurrentPassword" tabindex="-1">
+              <svg *ngIf="!showCurrentPassword" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+              <svg *ngIf="showCurrentPassword" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                <line x1="1" y1="1" x2="23" y2="23"/>
+              </svg>
+            </button>
+          </div>
+          <span class="error-msg" *ngIf="currentPasswordError">{{ currentPasswordError }}</span>
+        </div>
+
+        <div class="field">
+          <label>Nueva Contraseña</label>
+          <div class="input-wrapper">
+            <input
+              [(ngModel)]="newPassword"
+              name="newPassword"
+              [type]="showNewPassword ? 'text' : 'password'"
+              [class.input-error]="newPasswordError"
+              (blur)="validateNewPassword()"
+              placeholder=""
+            />
+            <button type="button" class="eye-btn" (click)="showNewPassword = !showNewPassword" tabindex="-1">
+              <svg *ngIf="!showNewPassword" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+              <svg *ngIf="showNewPassword" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                <line x1="1" y1="1" x2="23" y2="23"/>
+              </svg>
+            </button>
+          </div>
+          <span class="error-msg" *ngIf="newPasswordError">{{ newPasswordError }}</span>
+        </div>
+
+        <div class="field">
+          <label>Repita la nueva contraseña</label>
+          <div class="input-wrapper">
+            <input
+              [(ngModel)]="confirmPassword"
+              name="confirmPassword"
+              [type]="showConfirmPassword ? 'text' : 'password'"
+              [class.input-error]="confirmPasswordError"
+              (blur)="validateConfirmPassword()"
+              placeholder=""
+            />
+            <button type="button" class="eye-btn" (click)="showConfirmPassword = !showConfirmPassword" tabindex="-1">
+              <svg *ngIf="!showConfirmPassword" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+              <svg *ngIf="showConfirmPassword" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                <line x1="1" y1="1" x2="23" y2="23"/>
+              </svg>
+            </button>
+          </div>
+          <span class="error-msg" *ngIf="confirmPasswordError">{{ confirmPasswordError }}</span>
+          <small class="password-hint">Mínimo 8 caracteres</small>
+        </div>
+
+        <button
+          type="button"
+          class="btn-change-password"
+          [disabled]="loadingPassword"
+          (click)="onChangePassword()"
+        >
+          {{ loadingPassword ? 'Cambiando...' : 'Cambiar contraseña' }}
+        </button>
+
       </div>
-
-      <div class="field">
-        <label>Correo Electrónico</label>
-        <input
-          [ngModel]="email"
-          name="email"
-          type="email"
-          disabled
-          class="disabled-input"
-        />
-        <small class="email-hint">El correo electrónico no se puede modificar</small>
-      </div>
-
-      <div class="field">
-        <label>Nueva contraseña</label>
-        <input
-          [(ngModel)]="password"
-          name="password"
-          type="password"
-          placeholder="Dejar en blanco para mantener la actual"
-          [class.input-error]="passwordError"
-          (blur)="validatePassword()"
-          (input)="clearSuccess()"
-        />
-        <span class="error-msg" *ngIf="passwordError">{{ passwordError }}</span>
-        <small class="password-hint">Mínimo 6 caracteres. Solo si deseas cambiar la contraseña</small>
-      </div>
-
-      <p class="server-error" *ngIf="serverError">{{ serverError }}</p>
-
-      <button
-        type="submit"
-        class="btn-save"
-        [disabled]="isSubmitDisabled()"
-        [class.btn-disabled]="isSubmitDisabled()"
-      >
-        {{ loading ? 'Guardando...' : 'Guardar cambios' }}
-      </button>
-
-      <button
-        type="button"
-        class="btn-logout"
-        (click)="onLogout()"
-      >
-        Cerrar sesión
-      </button>
 
     </form>
 
