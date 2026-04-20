@@ -46,7 +46,7 @@ export class Register {
   }
 
   validateUsername() {
-    const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
+    const usernameRegex = /^[a-zA-ZñÑ0-9_]{3,20}$/;
     if (!this.username()) {
       this.usernameError.set('El nombre de usuario es obligatorio');
     } else if (!usernameRegex.test(this.username())) {
@@ -97,7 +97,16 @@ export class Register {
         this.showModal.set(true);
       },
       error: (err) => {
-        const detail = (err.error?.detail ?? '').toLowerCase();
+        const raw = err.error?.detail;
+        // FastAPI-Users puede devolver detail como string, objeto {code, reason} o array
+        const detail = (
+          typeof raw === 'string' ? raw
+          : Array.isArray(raw) ? JSON.stringify(raw)
+          : typeof raw === 'object' && raw !== null
+            ? (raw.code ?? raw.reason ?? JSON.stringify(raw))
+            : ''
+        ).toLowerCase();
+
         if (detail.includes('username')) {
           this.usernameError.set('Este nombre de usuario ya está en uso');
         } else if (detail.includes('email')) {
@@ -105,7 +114,7 @@ export class Register {
         } else if (detail.includes('password')) {
           this.passwordError.set('Mínimo 8 caracteres');
         } else {
-          this.serverError.set(err.error?.detail || 'Error al registrar');
+          this.serverError.set('Error al registrar. Intenta de nuevo.');
         }
         this.loading.set(false);
       },

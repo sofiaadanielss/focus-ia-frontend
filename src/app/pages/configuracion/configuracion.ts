@@ -85,19 +85,28 @@ export class ConfiguracionComponent implements OnInit {
       // Intentar guardar en backend
       await this.focusSvc.savePreferences(prefs.mode, prefs.duration).toPromise();
       
-      // Mostrar mensaje según si hay sesión activa
+      // Mostrar mensaje según si hay sesión activa y redirigir al dashboard
       if (this.haySesionActiva()) {
         this.mostrarSesionActiva.set(true);
-        setTimeout(() => this.mostrarSesionActiva.set(false), 4000);
+        setTimeout(() => {
+          this.mostrarSesionActiva.set(false);
+          this.router.navigate(['/dashboard']);
+        }, 1000);
       } else {
         this.mostrarCompletado.set(true);
-        setTimeout(() => this.mostrarCompletado.set(false), 3000);
+        setTimeout(() => {
+          this.mostrarCompletado.set(false);
+          this.router.navigate(['/dashboard']);
+        }, 1000);
       }
     } catch (error) {
       console.error('Error guardando preferencias:', error);
-      // Aún así, las preferencias quedan en localStorage
+      // Aún así, las preferencias quedan en localStorage y se redirige
       this.mostrarCompletado.set(true);
-      setTimeout(() => this.mostrarCompletado.set(false), 3000);
+      setTimeout(() => {
+        this.mostrarCompletado.set(false);
+        this.router.navigate(['/dashboard']);
+      }, 1000);
     }
   }
 
