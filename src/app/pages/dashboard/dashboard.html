@@ -172,6 +172,19 @@
           </button>
         }
       </div>
+      <!-- ① Barra vertical de tiempo restante (H8) -->
+      @if (sesionActiva) {
+        <div
+          class="timer-progress-bar-wrap"
+          [class.advertencia]="estaEnAdvertencia"
+          [title]="tooltipTiempo">
+          <div
+            class="timer-progress-bar-fill"
+            [style.height.%]="barraProgreso">
+          </div>
+          <div class="timer-progress-tooltip">{{ tooltipTiempo }}</div>
+        </div>
+      }
     </div>
 
     <!-- Session summary with distractions -->

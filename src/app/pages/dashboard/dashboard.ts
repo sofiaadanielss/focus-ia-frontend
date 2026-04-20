@@ -55,6 +55,26 @@ export class Dashboard implements OnInit, OnDestroy {
   get horaInicio()       { return this.timerSvc.state.horaInicio; }
   get horaFin()          { return this.timerSvc.state.horaFin; }
 
+  /** Porcentaje de tiempo restante (0-100) para la barra vertical */
+  get barraProgreso(): number {
+    const total = this.timerSvc.state.tiempoTotal;
+    if (!total) return 100;
+    return (this.timerSvc.state.tiempoRestante / total) * 100;
+  }
+
+  /** true cuando faltan ≤ 2 minutos */
+  get estaEnAdvertencia(): boolean {
+    return this.timerSvc.state.sesionActiva && this.timerSvc.state.tiempoRestante <= 120;
+  }
+
+  /** Tiempo restante en formato MM:SS para el tooltip */
+  get tooltipTiempo(): string {
+    const seg = this.timerSvc.state.tiempoRestante;
+    const m = Math.floor(seg / 60);
+    const s = seg % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  }
+
   // Para el modal de completado (reemplaza mostrarModal del template)
   _mostrarModal = false;
 
