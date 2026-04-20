@@ -113,6 +113,8 @@ export class Register {
           this.emailError.set('Este correo ya está registrado');
         } else if (detail.includes('password')) {
           this.passwordError.set('Mínimo 8 caracteres');
+        } else if (detail.includes('already') || detail.includes('exists') || detail.includes('duplicate') || detail.includes('ya existe') || detail.includes('en uso')) {
+          this.serverError.set('El correo o nombre de usuario ya están en uso');
         } else {
           this.serverError.set('Error al registrar. Intenta de nuevo.');
         }
