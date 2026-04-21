@@ -3,13 +3,13 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService, UserProfile, UpdateProfileRequest } from '../../core/auth/auth.service';
+import { Sidebar } from '../../shared/sidebar/sidebar';
 
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [CommonModule, FormsModule],
-  templateUrl: './profile.html',
-  styleUrl: './profile.css'
+  imports: [CommonModule, FormsModule, Sidebar],
+  templateUrl: './profile.html'
 })
 export class Profile implements OnInit {
   currentName = '';
@@ -17,7 +17,6 @@ export class Profile implements OnInit {
   username = '';
   email = '';
 
-  // Panel cambio de contraseña
   showPasswordPanel = false;
   currentPassword = '';
   newPassword = '';
@@ -27,7 +26,6 @@ export class Profile implements OnInit {
   confirmPasswordError = '';
   loadingPassword = false;
 
-  // Visibilidad de contraseñas
   showCurrentPassword = false;
   showNewPassword = false;
   showConfirmPassword = false;
@@ -61,7 +59,6 @@ export class Profile implements OnInit {
         this.cdr.markForCheck();
       },
       error: (err) => {
-        console.error('Error loading profile:', err);
         if (err.status === 401) {
           this.authService.logout();
           this.router.navigate(['/login']);
@@ -74,12 +71,7 @@ export class Profile implements OnInit {
   }
 
   isSubmitDisabled(): boolean {
-    return (
-      (!this.fullName && !this.username) ||
-      !!this.fullNameError ||
-      !!this.usernameError ||
-      this.loading
-    );
+    return (!this.fullName && !this.username) || !!this.fullNameError || !!this.usernameError || this.loading;
   }
 
   validateFullName() {
@@ -115,7 +107,6 @@ export class Profile implements OnInit {
     this.clearSuccess();
   }
 
-  // --- Panel contraseña ---
   togglePasswordPanel() {
     this.showPasswordPanel = !this.showPasswordPanel;
     if (!this.showPasswordPanel) {
@@ -161,7 +152,6 @@ export class Profile implements OnInit {
     }
     this.validateNewPassword();
     this.validateConfirmPassword();
-
     if (this.currentPasswordError || this.newPasswordError || this.confirmPasswordError) return;
     if (this.newPassword !== this.confirmPassword) {
       this.confirmPasswordError = 'Las contraseñas no coinciden';
@@ -201,16 +191,10 @@ export class Profile implements OnInit {
     this.serverError = '';
   }
 
-  volver() {
-    this.router.navigate(['/dashboard']);
-  }
-
   onSubmit() {
     this.validateFullName();
     this.validateUsername();
-
     if (this.fullNameError || this.usernameError) return;
-
     if (!this.fullName.trim() && !this.username.trim()) {
       this.serverError = 'Debes proporcionar al menos nombre completo o nombre de usuario';
       return;
@@ -241,7 +225,6 @@ export class Profile implements OnInit {
         this.cdr.markForCheck();
       },
       error: (err) => {
-        console.error('Error al actualizar perfil:', err);
         const raw = err.error?.detail;
         const errorLower = (
           typeof raw === 'string' ? raw

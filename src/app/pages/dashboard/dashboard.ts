@@ -1,17 +1,18 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, ViewChild, ElementRef, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { CameraTrackingService, CameraStatus, ToastEvent } from '../../core/services/camera-tracking.service';
 import { DistractionLogService } from '../../core/services/distracion-log.service';
 import { FocusService } from '../../core/services/focus.service';
 import { TimerService } from '../../core/services/timer.service';
+import { Sidebar } from '../../shared/sidebar/sidebar';
+import { Preferencias } from '../../features/preferencias/preferencias';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [RouterLink],
-  templateUrl: './dashboard.html',
-  styleUrl: './dashboard.css'
+  imports: [Sidebar, Preferencias],
+  templateUrl: './dashboard.html'
 })
 export class Dashboard implements OnInit, OnDestroy {
   @ViewChild('videoEl') videoRef!: ElementRef<HTMLVideoElement>;
@@ -19,17 +20,15 @@ export class Dashboard implements OnInit, OnDestroy {
 
   loading = false;
   error = '';
-
   cameraStatus: CameraStatus = 'idle';
   cameraPermisoDenegado = false;
-
   toasts: { tipo: string; mensaje: string; visible: boolean; autoCloseTimer?: any }[] = [];
-
   ultimoEventoTimestamp = '';
   ultimoEventoTipo = '';
   totalDistracciones = 0;
-
   confettiPieces: { left: string; delay: string; duration: string; color: string }[] = [];
+  mostrarPreferencias = signal(false);
+  _mostrarModal = false;
 
   private toastSub!: Subscription;
   private statusSub!: Subscription;
@@ -43,7 +42,6 @@ export class Dashboard implements OnInit, OnDestroy {
     public timerSvc: TimerService
   ) {}
 
-  // Getters que apuntan al servicio
   get timerDisplay()     { return this.timerSvc.timerDisplay; }
   get sesionActiva()     { return this.timerSvc.state.sesionActiva; }
   get pausado()          { return this.timerSvc.state.pausado; }
@@ -55,19 +53,16 @@ export class Dashboard implements OnInit, OnDestroy {
   get horaInicio()       { return this.timerSvc.state.horaInicio; }
   get horaFin()          { return this.timerSvc.state.horaFin; }
 
-  /** Porcentaje de tiempo restante (0-100) para la barra vertical */
   get barraProgreso(): number {
     const total = this.timerSvc.state.tiempoTotal;
     if (!total) return 100;
     return (this.timerSvc.state.tiempoRestante / total) * 100;
   }
 
-  /** true cuando faltan ≤ 2 minutos */
   get estaEnAdvertencia(): boolean {
     return this.timerSvc.state.sesionActiva && this.timerSvc.state.tiempoRestante <= 120;
   }
 
-  /** Tiempo restante en formato MM:SS para el tooltip */
   get tooltipTiempo(): string {
     const seg = this.timerSvc.state.tiempoRestante;
     const m = Math.floor(seg / 60);
@@ -75,20 +70,15 @@ export class Dashboard implements OnInit, OnDestroy {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   }
 
-  // Para el modal de completado (reemplaza mostrarModal del template)
-  _mostrarModal = false;
-
   ngOnInit() {
     this.cargarPreferencias();
 
-    // Si había sesión activa antes de navegar, rearrancar el interval
     if (this.timerSvc.state.sesionActiva && !this.timerSvc.state.pausado) {
       this.timerSvc.iniciarTimer(
         () => this.cdr.detectChanges(),
         () => this.endSession()
       );
 
-      // Rearrancar cámara tras render del <video>
       setTimeout(async () => {
         const videoEl = this.videoRef?.nativeElement;
         const canvasEl = this.canvasRef?.nativeElement;
@@ -119,16 +109,12 @@ export class Dashboard implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    // NO limpiar el interval aquí — el servicio lo mantiene vivo
-    // Solo desuscribirse de observables del componente
     this.toastSub?.unsubscribe();
     this.statusSub?.unsubscribe();
   }
 
   cargarPreferencias() {
-    // Solo cargar si no hay sesión activa (no pisar el estado del timer)
     if (this.timerSvc.state.sesionActiva) return;
-
     const prefs = this.focusService.getPreferenciasLocal();
     const duracion = prefs ? Number(prefs.duration) || 45 : 45;
     const modosMap: Record<string, string> = {
@@ -137,7 +123,6 @@ export class Dashboard implements OnInit, OnDestroy {
       'absoluta': 'Concentración absoluta'
     };
     const modo = prefs ? (modosMap[prefs.mode] || 'No configurado') : 'Tranquilo';
-
     this.timerSvc.setEstadoSesion({
       duracionMinutos: duracion,
       modoTexto: modo,
@@ -170,7 +155,6 @@ export class Dashboard implements OnInit, OnDestroy {
     this.totalDistracciones = 0;
     this.ultimoEventoTimestamp = '';
     this.ultimoEventoTipo = '';
-
     this.timerSvc.setEstadoSesion({ sesionActiva: true });
     this.cdr.detectChanges();
 
@@ -226,7 +210,6 @@ export class Dashboard implements OnInit, OnDestroy {
 
   togglePausa() {
     if (!this.timerSvc.state.sesionActiva || this.timerSvc.state.sesionTerminada) return;
-
     if (!this.timerSvc.state.pausado) {
       this.timerSvc.pausarTimer();
       this.cameraTracking.pausar();
@@ -242,7 +225,6 @@ export class Dashboard implements OnInit, OnDestroy {
 
   async endSession() {
     if (!this.timerSvc.state.sesionActiva || this.loading) return;
-
     this.loading = true;
     this.timerSvc.limpiarInterval();
     this.cameraTracking.detener();
@@ -251,9 +233,7 @@ export class Dashboard implements OnInit, OnDestroy {
     const completada = this.timerSvc.state.tiempoRestante <= 0;
 
     if (this.timerSvc.state.sessionIdBackend) {
-      try {
-        await this.focusService.endSession(this.timerSvc.state.sessionIdBackend).toPromise();
-      } catch (err) {}
+      try { await this.focusService.endSession(this.timerSvc.state.sessionIdBackend).toPromise(); } catch (err) {}
     }
 
     const distraccionesData = this.distractionLog.sincronizarAlFinalizar();
@@ -322,10 +302,17 @@ export class Dashboard implements OnInit, OnDestroy {
     }
   }
 
-  logout() {
-    this.cameraTracking.detener();
-    this.timerSvc.limpiarInterval();
-    this.router.navigate(['/login']);
+  abrirPreferencias() {
+    this.mostrarPreferencias.set(true);
+  }
+
+  cerrarPreferencias() {
+    this.mostrarPreferencias.set(false);
+  }
+
+  onPreferenciasGuardadas() {
+    this.cargarPreferencias();
+    this.cerrarPreferencias();
   }
 
   private manejarToast(event: ToastEvent): void {

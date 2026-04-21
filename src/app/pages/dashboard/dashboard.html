@@ -1,122 +1,81 @@
-<div class="dashboard-page">
-  <!-- Sidebar -->
-  <aside class="sidebar">
-    <div class="sidebar-brand">
-        <img src="/assets/logo.png" class="brand-icon">
-        <span class="brand-name">Focus AI</span>
-    </div>
-    <nav class="sidebar-nav">
-      <a class="nav-item active" routerLink="/dashboard">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-        Panel
-      </a>
-      <a class="nav-item" routerLink="/configuracion">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
-        Preferencias
-      </a>
-      <a class="nav-item" routerLink="/profile">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-        Perfil
-      </a>
-    </nav>
-    <button class="logout-btn" (click)="logout()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-      Cerrar Sesión
-    </button>
-  </aside>
+<div class="flex w-screen h-screen font-sans bg-[#F3F4F6] overflow-hidden">
 
-  <!-- Main content -->
-  <main class="main-content">
-    <div class="page-header">
-      <h1 class="page-title">Panel Principal</h1>
-      <p class="page-subtitle">Gestiona tu sesión de estudio y concentración</p>
+  <app-sidebar></app-sidebar>
+
+  <main class="flex-1 px-[52px] py-10 overflow-y-auto flex flex-col gap-4 mobile:px-6 mobile:items-center mobile:pt-16">
+
+    <div class="mb-2">
+      <h1 class="text-[1.8rem] font-extrabold text-[#111827]">Panel Principal</h1>
+      <p class="text-sm text-[#6b7280] mt-1">Gestiona tu sesión de estudio y concentración</p>
     </div>
 
-    <!-- Camera denied message -->
     @if (cameraPermisoDenegado && !sesionActiva) {
-      <div class="camera-denied-card">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="28" height="28">
-          <path d="M16.5 12a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0Z"/>
-          <path d="M2 2l20 20"/>
-          <path d="M6.7 6.7A7.5 7.5 0 0 0 4.5 12c0 4.14 3.36 7.5 7.5 7.5a7.5 7.5 0 0 0 5.3-2.2"/>
-          <path d="M19.5 12c0-4.14-3.36-7.5-7.5-7.5a7.47 7.47 0 0 0-2.8.55"/>
-        </svg>
+      <div class="flex items-start gap-4 bg-[#fef2f2] border border-[#fecaca] rounded-2xl px-6 py-5 max-w-[520px] text-[#991b1b]">
+        <svg class="shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="28" height="28"><path d="M16.5 12a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0Z"/><path d="M2 2l20 20"/><path d="M6.7 6.7A7.5 7.5 0 0 0 4.5 12c0 4.14 3.36 7.5 7.5 7.5a7.5 7.5 0 0 0 5.3-2.2"/><path d="M19.5 12c0-4.14-3.36-7.5-7.5-7.5a7.47 7.47 0 0 0-2.8.55"/></svg>
         <div>
-          <p class="denied-title">Acceso a la cámara denegado</p>
-          <p class="denied-text">El rastreo de concentración necesita acceso a tu cámara para detectar tu rostro y mirada. Por favor, permite el acceso en la configuración de tu navegador e intenta de nuevo.</p>
+          <p class="text-sm font-bold mb-1">Acceso a la cámara denegado</p>
+          <p class="text-xs leading-relaxed text-[#b91c1c]">El rastreo de concentración necesita acceso a tu cámara para detectar tu rostro y mirada. Por favor, permite el acceso en la configuración de tu navegador e intenta de nuevo.</p>
         </div>
       </div>
     }
 
-    <!-- Timer Card -->
-    <div class="timer-card" [class.active]="sesionActiva">
-      <!-- Camera status badge -->
+    <div class="bg-white rounded-2xl px-10 py-10 text-center border-2 border-[#e5e7eb] max-w-[520px] relative transition-colors duration-300 flex flex-col items-center justify-center"
+         [class.border-[#7c3aed]]="sesionActiva">
+
       @if (sesionActiva && cameraStatus === 'active') {
-        <div class="camera-badge active-badge">
-          <span class="camera-dot"></span>
+        <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[0.72rem] font-semibold tracking-wide mb-4 bg-[#c4b5fd] text-[#312e81]">
+          <span class="w-2 h-2 rounded-full bg-[#10b981] animate-pulse"></span>
           Cámara activa
           @if (ultimoEventoTimestamp) {
-            <span class="badge-separator">·</span>
-            <span class="badge-event">{{ ultimoEventoTimestamp }} &nbsp;{{ ultimoEventoTipo }}</span>
+            <span class="opacity-50">·</span>
+            <span class="font-medium opacity-85">{{ ultimoEventoTimestamp }}&nbsp;{{ ultimoEventoTipo }}</span>
           }
         </div>
       }
 
-      <div class="timer-label">
-        @if (!sesionActiva && !sesionTerminada) {
-          Sin sesión activa · {{ modoTexto }} · {{ duracionMinutos }} min
-        }
-        @if (sesionActiva && !pausado) {
-          Sesión en curso
-        }
-        @if (sesionActiva && pausado) {
-          Sesión en pausa
-        }
-        @if (sesionTerminada) {
-          Sesión finalizada
-        }
+      <div class="text-[0.75rem] font-semibold text-[#9ca3af] tracking-[0.08em] uppercase mb-4">
+        @if (!sesionActiva && !sesionTerminada) { Sin sesión activa · {{ modoTexto }} · {{ duracionMinutos }} min }
+        @if (sesionActiva && !pausado) { Sesión en curso }
+        @if (sesionActiva && pausado) { Sesión en pausa }
+        @if (sesionTerminada) { Sesión finalizada }
       </div>
 
-      <!-- Camera feed area -->
       @if (sesionActiva || cameraStatus === 'requesting') {
-        <div class="camera-container">
-          <video #videoEl autoplay playsinline muted class="camera-video"></video>
-          <canvas #canvasEl class="camera-canvas"></canvas>
+        <div class="w-[280px] h-[210px] mx-auto mb-5 rounded-xl overflow-hidden relative bg-[#ede9fe]">
+          <video #videoEl autoplay playsinline muted class="w-full h-full object-cover scale-x-[-1]"></video>
+          <canvas #canvasEl class="hidden"></canvas>
           @if (cameraStatus === 'requesting') {
-            <div class="camera-overlay">
-              <div class="camera-placeholder">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48">
-                  <circle cx="12" cy="8" r="4"/>
-                  <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
-                </svg>
+            <div class="absolute inset-0 flex items-center justify-center bg-[#ede9fe]">
+              <div class="text-[#312e81] opacity-50">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
               </div>
             </div>
           }
         </div>
       }
 
-      <!-- Placeholder when no session -->
       @if (!sesionActiva && !sesionTerminada) {
-        <div class="camera-container placeholder">
-          <div class="camera-placeholder-box">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="56" height="56">
-              <circle cx="12" cy="8" r="4"/>
-              <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
-            </svg>
-            <p class="placeholder-text">Aquí va la cámara de la persona</p>
+        <div class="w-[280px] h-[210px] mx-auto mb-5 rounded-xl bg-[#ede9fe] flex items-center justify-center">
+          <div class="flex flex-col items-center gap-3 text-[#312e81] opacity-50">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="56" height="56"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+            <p class="text-[0.78rem] font-medium">Aquí va la cámara de la persona</p>
           </div>
         </div>
       }
 
-      <div class="timer-display" [class.paused]="pausado">{{ timerDisplay }}</div>
+      <div class="text-[3.5rem] font-extrabold text-[#111827] tracking-[0.04em] mb-3 tabular-nums"
+           [class.text-[#7c3aed]]="sesionActiva"
+           [class.animate-pulse]="pausado">
+        {{ timerDisplay }}
+      </div>
 
-      <div class="timer-status">
+      <div class="flex items-center justify-center gap-2 text-[0.78rem] text-[#6b7280] mb-5 min-h-[20px]">
         @if (sesionActiva && !pausado) {
-          <span class="status-dot"></span>
+          <span class="w-2 h-2 rounded-full bg-[#10b981] animate-pulse shrink-0"></span>
           Registrando desde {{ horaInicio }}
         }
         @if (sesionActiva && pausado) {
-          <span class="status-dot paused-dot"></span>
+          <span class="w-2 h-2 rounded-full bg-[#f59e0b] animate-pulse shrink-0"></span>
           En pausa · Iniciada {{ horaInicio }}
         }
         @if (sesionTerminada && horaFin) {
@@ -125,153 +84,136 @@
       </div>
 
       @if (error) {
-        <p class="error-msg">{{ error }}</p>
+        <p class="text-xs text-[#ef4444] mb-4">{{ error }}</p>
       }
 
-      <!-- Distraction counter -->
       @if (sesionActiva && totalDistracciones > 0) {
-        <div class="distraction-counter">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-            <line x1="12" y1="9" x2="12" y2="13"/>
-            <line x1="12" y1="17" x2="12.01" y2="17"/>
-          </svg>
+        <div class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[0.75rem] font-semibold text-[#92400e] bg-[#fef3c7] mb-4">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
           {{ totalDistracciones }} distracción{{ totalDistracciones > 1 ? 'es' : '' }} detectada{{ totalDistracciones > 1 ? 's' : '' }}
         </div>
       }
 
-      <div class="btn-group">
+      <div class="flex gap-3 justify-center flex-wrap mt-2">
         @if (!sesionActiva && !sesionTerminada) {
-          <button
-            class="btn-session btn-start"
-            (click)="startSession()"
-            [disabled]="loading">
+          <button class="px-10 py-3.5 rounded-full text-base font-bold text-white bg-[#7c3aed] hover:bg-[#6d28d9] disabled:opacity-60 disabled:cursor-not-allowed transition-colors border-none cursor-pointer font-sans"
+                  (click)="startSession()" [disabled]="loading">
             {{ loading ? 'Iniciando...' : '▶ Iniciar Sesión' }}
           </button>
         }
-
         @if (sesionActiva) {
-          <button
-            class="btn-session btn-pause"
-            (click)="togglePausa()">
+          <button class="px-10 py-3.5 rounded-full text-base font-bold text-white bg-[#f59e0b] hover:bg-[#d97706] transition-colors border-none cursor-pointer font-sans"
+                  (click)="togglePausa()">
             {{ pausado ? '▶ Reanudar' : '⏸ Pausar' }}
           </button>
-          <button
-            class="btn-session btn-end"
-            (click)="endSession()"
-            [disabled]="loading">
+          <button class="px-10 py-3.5 rounded-full text-base font-bold text-white bg-[#ef4444] hover:bg-[#dc2626] disabled:opacity-60 disabled:cursor-not-allowed transition-colors border-none cursor-pointer font-sans"
+                  (click)="endSession()" [disabled]="loading">
             {{ loading ? 'Finalizando...' : '⏹ Finalizar' }}
           </button>
         }
-
         @if (sesionTerminada && !_mostrarModal) {
-          <button
-            class="btn-session btn-start"
-            (click)="nuevaSesion()">
+          <button class="px-10 py-3.5 rounded-full text-base font-bold text-white bg-[#7c3aed] hover:bg-[#6d28d9] transition-colors border-none cursor-pointer font-sans"
+                  (click)="nuevaSesion()">
             🔄 Nueva Sesión
           </button>
         }
       </div>
-      <!-- ① Barra vertical de tiempo restante (H8) -->
+
       @if (sesionActiva) {
-        <div
-          class="timer-progress-bar-wrap"
-          [class.advertencia]="estaEnAdvertencia"
-          [title]="tooltipTiempo">
-          <div
-            class="timer-progress-bar-fill"
-            [style.height.%]="barraProgreso">
+        <div class="absolute top-5 right-[-18px] w-[10px] bg-[#e5e7eb] rounded-full overflow-visible cursor-default group"
+             [style.height]="'calc(100% - 40px)'"
+             [title]="tooltipTiempo">
+          <div class="absolute top-0 left-0 w-full rounded-full transition-[height] duration-1000 bg-[#7c3aed]"
+               [class.bg-[#ef4444]]="estaEnAdvertencia"
+               [style.height.%]="barraProgreso">
           </div>
-          <div class="timer-progress-tooltip">{{ tooltipTiempo }}</div>
+          <div class="hidden group-hover:block absolute right-[18px] top-1/2 -translate-y-1/2 bg-[#1f2937] text-white text-xs font-semibold px-2.5 py-1 rounded-md whitespace-nowrap pointer-events-none z-20 after:content-[''] after:absolute after:left-full after:top-1/2 after:-translate-y-1/2 after:border-[5px] after:border-transparent after:border-l-[#1f2937]"
+               [class.bg-[#ef4444]]="estaEnAdvertencia">
+            {{ tooltipTiempo }}
+          </div>
         </div>
       }
+
     </div>
 
-    <!-- Session summary with distractions -->
     @if (sesionTerminada && totalDistracciones > 0) {
-      <div class="summary-card">
-        <h3 class="summary-title">Resumen de Distracciones</h3>
-        <p class="summary-total">Se detectaron <strong>{{ totalDistracciones }}</strong> distracción{{ totalDistracciones > 1 ? 'es' : '' }} durante la sesión.</p>
+      <div class="bg-white rounded-2xl p-6 border border-[#e5e7eb] max-w-[520px]">
+        <h3 class="text-base font-bold text-[#111827] mb-2">Resumen de Distracciones</h3>
+        <p class="text-sm text-[#6b7280] leading-relaxed">Se detectaron <strong>{{ totalDistracciones }}</strong> distracción{{ totalDistracciones > 1 ? 'es' : '' }} durante la sesión.</p>
       </div>
     }
 
-    <!-- Quick access card -->
-    <div class="quick-card" routerLink="/configuracion">
-      <div class="quick-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="28" height="28">
-          <circle cx="12" cy="12" r="3"/>
-          <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
-        </svg>
+    <div class="flex items-center gap-4 bg-white rounded-2xl px-6 py-5 border border-[#e5e7eb] max-w-[520px] cursor-pointer hover:border-[#7c3aed] hover:shadow-[0_4px_12px_rgba(124,58,237,0.08)] transition-all" (click)="abrirPreferencias()">
+      <div class="w-12 h-12 bg-[#f5f3ff] rounded-[10px] flex items-center justify-center text-[#7c3aed] shrink-0">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="28" height="28"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
       </div>
-      <div class="quick-text">
-        <p class="quick-title">Preferencias de Concentración</p>
-        <p class="quick-sub">Configura tu modo de enfoque y duración de sesión</p>
+      <div class="flex-1">
+        <p class="text-sm font-bold text-[#111827]">Preferencias de Concentración</p>
+        <p class="text-xs text-[#6b7280] mt-0.5">Configura tu modo de enfoque y duración de sesión</p>
       </div>
-      <span class="quick-arrow">→</span>
+      <span class="text-xl text-[#9ca3af]">→</span>
     </div>
+
   </main>
+
 </div>
 
-<!-- Toast notifications (esquina inferior derecha) -->
-<div class="toast-container">
+<div class="fixed bottom-6 right-6 flex flex-col-reverse gap-3 z-[9999] pointer-events-none">
   @for (toast of toasts; track toast.tipo; let i = $index) {
-    <div class="toast-notification" [class.toast-fuera]="toast.tipo === 'fuera_de_encuadre'" [class.toast-desvio]="toast.tipo === 'desvio_mirada'">
-      <div class="toast-icon">
+    <div class="flex items-center gap-3 px-5 py-3.5 rounded-xl text-sm font-semibold text-white min-w-[280px] max-w-[400px] shadow-[0_8px_24px_rgba(0,0,0,0.15)] pointer-events-auto relative animate-[toastSlideIn_0.3s_ease-out]"
+         [class.bg-[#ef4444]]="toast.tipo === 'fuera_de_encuadre'"
+         [class.bg-[#f59e0b]]="toast.tipo === 'desvio_mirada'"
+         [class.text-[#78350f]]="toast.tipo === 'desvio_mirada'">
+      <div class="shrink-0 flex items-center">
         @if (toast.tipo === 'fuera_de_encuadre') {
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
-            <circle cx="12" cy="8" r="4"/>
-            <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
-            <line x1="2" y1="2" x2="22" y2="22"/>
-          </svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
         }
         @if (toast.tipo === 'desvio_mirada') {
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
-            <circle cx="12" cy="12" r="3"/>
-            <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/>
-            <line x1="2" y1="2" x2="22" y2="22"/>
-          </svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><circle cx="12" cy="12" r="3"/><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
         }
       </div>
-      <span class="toast-message">{{ toast.mensaje }}</span>
-      <button class="toast-close" (click)="cerrarToast(i)">✕</button>
+      <span class="flex-1">{{ toast.mensaje }}</span>
+      <button class="absolute top-1.5 right-2.5 bg-transparent border-none text-inherit text-sm opacity-70 hover:opacity-100 cursor-pointer p-1 leading-none font-sans" (click)="cerrarToast(i)">✕</button>
     </div>
   }
 </div>
 
-<!-- Modal de completado -->
 @if (_mostrarModal) {
-  <div class="modal-overlay" (click)="cerrarModal()">
-    <div class="modal-content" (click)="$event.stopPropagation()">
-      <div class="confetti-container">
+  <div class="fixed inset-0 bg-black/50 flex justify-center items-center z-[1000] animate-[fadeIn_0.3s_ease]" (click)="cerrarModal()">
+    <div class="bg-white rounded-3xl p-12 max-w-[450px] w-[90%] text-center relative overflow-hidden animate-[scaleIn_0.4s_ease]" (click)="$event.stopPropagation()">
+      <div class="absolute inset-0 pointer-events-none overflow-hidden z-[1]">
         @for (piece of confettiPieces; track $index) {
-          <div
-            class="confetti-piece"
-            [style.left]="piece.left"
-            [style.animation-delay]="piece.delay"
-            [style.animation-duration]="piece.duration"
-            [style.background-color]="piece.color">
+          <div class="absolute top-[-10px] w-2 h-4 rounded-sm animate-[confettiFall_linear_forwards]"
+               [style.left]="piece.left"
+               [style.animation-delay]="piece.delay"
+               [style.animation-duration]="piece.duration"
+               [style.background-color]="piece.color">
           </div>
         }
       </div>
-      <div class="modal-body">
-        <span class="modal-emoji">🎉</span>
-        <h2 class="modal-title">¡Felicidades!</h2>
-        <p class="modal-text">
+      <div class="relative z-[2]">
+        <span class="text-[4rem] block mb-4 animate-[bounce_0.6s_ease]">🎉</span>
+        <h2 class="font-display text-[#312e81] text-[2rem] font-extrabold mb-3">¡Felicidades!</h2>
+        <p class="text-[#4b5563] text-base mb-2 leading-relaxed">
           Completaste tu sesión de estudio de <strong>{{ duracionMinutos }} minutos</strong> en modo <strong>{{ modoTexto }}</strong>.
         </p>
         @if (totalDistracciones > 0) {
-          <p class="modal-text">
+          <p class="text-[#4b5563] text-base mb-2 leading-relaxed">
             Se registraron <strong>{{ totalDistracciones }}</strong> distracción{{ totalDistracciones > 1 ? 'es' : '' }}.
           </p>
         }
         @if (totalDistracciones === 0) {
-          <p class="modal-text">¡No se detectaron distracciones! Concentración perfecta.</p>
+          <p class="text-[#4b5563] text-base mb-2 leading-relaxed">¡No se detectaron distracciones! Concentración perfecta.</p>
         }
-        <p class="modal-subtext">¡Lograste acabar la sesión con éxito! 🚀</p>
-        <button class="btn-modal-close" (click)="cerrarModal()">
+        <p class="text-[#7c3aed] font-bold text-lg mt-2 mb-6">¡Lograste acabar la sesión con éxito! 🚀</p>
+        <button class="bg-[#7c3aed] hover:bg-[#6d28d9] text-white border-none px-11 py-3.5 rounded-full cursor-pointer font-bold text-base font-sans transition-colors" (click)="cerrarModal()">
           Cerrar
         </button>
       </div>
     </div>
   </div>
+}
+
+@if (mostrarPreferencias()) {
+  <app-preferencias (cerrar)="cerrarPreferencias()" (guardado)="onPreferenciasGuardadas()"></app-preferencias>
 }
