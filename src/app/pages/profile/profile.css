@@ -13,16 +13,15 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   font-family: 'DM Sans', sans-serif;
-  padding: 110px 48px 48px;
+  padding: 110px 24px 40px;
   position: relative;
-  zoom: 1.5;
 }
 
 .profile-card {
   width: 100%;
-  max-width: 1100px;
+  max-width: 900px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -34,10 +33,10 @@
   top: 0;
   left: 0;
   right: 0;
-  padding: 20px 40px;
+  padding: 14px 32px;
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
+  justify-content: flex-start;
   z-index: 10;
   background-color: #f3f4f6;
 }
@@ -46,21 +45,21 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 8px;
+  gap: 6px;
 }
 
 .brand {
-  font-size: 1.5rem;
+  font-size: 1.2rem;
   font-weight: 800;
   color: #111827;
   letter-spacing: -0.01em;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .brand-logo {
-  width: 32px;
+  width: 26px;
   height: auto;
 }
 
@@ -69,10 +68,9 @@
   color: #6d28d9;
   font-size: 0.72rem;
   font-weight: 600;
-  padding: 6px 16px;
+  padding: 4px 12px;
   border-radius: 999px;
   animation: fadeIn 0.2s ease;
-  align-self: center;
 }
 
 .back-btn {
@@ -105,27 +103,27 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 32px;
+  margin-bottom: 20px;
 }
 
 .avatar-circle {
-  width: 120px;
-  height: 120px;
+  width: 64px;
+  height: 64px;
   background-color: #ede9fe;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 16px;
+  margin-bottom: 10px;
 }
 
 .avatar-circle svg {
-  width: 70px;
-  height: 70px;
+  width: 54px;
+  height: 54px;
 }
 
 .avatar-name {
-  font-size: 2rem;
+  font-size: 0.95rem;
   font-weight: 700;
   color: #111827;
 }
@@ -135,40 +133,38 @@
 .profile-form {
   width: 100%;
   display: flex;
-  flex-direction: row;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 36px;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
   transition: all 0.2s ease;
 }
 
-/* Columna izquierda */
 .form-main-fields {
-  width: 500px;
-  flex-shrink: 0;
+  width: 100%;
+  max-width: 480px;
 }
 
 /* ── Campos ─────────────────────────────────────── */
 
 .field {
-  margin-bottom: 26px;
+  margin-bottom: 16px;
   display: flex;
   flex-direction: column;
 }
 
 .field label {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 600;
   color: #6b7280;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .field input {
   width: 100%;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
-  padding: 14px 48px 14px 18px;
-  font-size: 1.05rem;
+  padding: 10px 44px 10px 16px;
+  font-size: 0.95rem;
   font-family: inherit;
   color: #111827;
   background: #ffffff;
@@ -198,30 +194,30 @@
 }
 
 .error-msg {
-  font-size: 0.84rem;
+  font-size: 0.8rem;
   color: #ef4444;
-  margin-top: 5px;
+  margin-top: 4px;
 }
 
 .email-hint {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: #f59e0b;
-  margin-top: 6px;
+  margin-top: 5px;
   display: block;
 }
 
 .password-hint {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: #9ca3af;
-  margin-top: 6px;
+  margin-top: 5px;
   display: block;
 }
 
 .server-error {
-  font-size: 0.88rem;
+  font-size: 0.85rem;
   color: #ef4444;
   text-align: center;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 /* ── Input con ojo ──────────────────────────────── */
@@ -257,8 +253,8 @@
 }
 
 .eye-btn svg {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
 }
 
 /* ── Botones principales ────────────────────────── */
@@ -269,12 +265,12 @@
   color: #fff;
   border: none;
   border-radius: 999px;
-  padding: 18px 0;
-  font-size: 1.1rem;
+  padding: 14px 0;
+  font-size: 1rem;
   font-weight: 700;
   font-family: inherit;
   cursor: pointer;
-  margin-top: 32px;
+  margin-top: 20px;
   transition: background-color 0.15s;
 }
 
@@ -289,12 +285,12 @@
   color: #ef4444;
   border: 2px solid #ef4444;
   border-radius: 999px;
-  padding: 16px 0;
-  font-size: 1.05rem;
+  padding: 12px 0;
+  font-size: 0.95rem;
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  margin-top: 14px;
+  margin-top: 10px;
   transition: all 0.15s;
 }
 
@@ -322,8 +318,8 @@
   color: #7c3aed;
   border: 1.5px solid #c4b5fd;
   border-radius: 999px;
-  padding: 15px 0;
-  font-size: 1.05rem;
+  padding: 12px 0;
+  font-size: 0.95rem;
   font-weight: 600;
   font-family: 'DM Sans', sans-serif;
   cursor: pointer;
@@ -341,18 +337,18 @@
 
 .password-panel {
   background-color: #ede9fe;
-  border-radius: 28px;
-  padding: 36px 36px 32px;
+  border-radius: 24px;
+  padding: 28px 28px 24px;
   animation: fadeIn 0.2s ease;
-  width: 480px;
-  flex-shrink: 0;
+  width: 100%;
+  max-width: 480px;
 }
 
 .password-panel-title {
-  font-size: 1.3rem;
+  font-size: 1.1rem;
   font-weight: 700;
   color: #4c1d95;
-  margin-bottom: 28px;
+  margin-bottom: 20px;
 }
 
 .password-panel .field label {
@@ -371,12 +367,12 @@
   color: #fff;
   border: none;
   border-radius: 999px;
-  padding: 17px 0;
-  font-size: 1.05rem;
+  padding: 14px 0;
+  font-size: 0.95rem;
   font-weight: 700;
   font-family: 'DM Sans', sans-serif;
   cursor: pointer;
-  margin-top: 12px;
+  margin-top: 10px;
   transition: background-color 0.15s;
 }
 
@@ -391,7 +387,11 @@
 
 /* ── Responsive ─────────────────────────────────── */
 
-@media (max-width: 1080px) {
+@media (max-width: 820px) {
+  .profile-page {
+    padding: 70px 16px 32px;
+  }
+
   .profile-form {
     flex-direction: column;
     align-items: center;
@@ -400,7 +400,7 @@
   .form-main-fields,
   .password-panel {
     width: 100%;
-    max-width: 500px;
+    max-width: 480px;
   }
 
   .password-panel {
