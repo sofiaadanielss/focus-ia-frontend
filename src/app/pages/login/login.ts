@@ -9,8 +9,7 @@ import { LucideAngularModule, Eye, EyeOff } from 'lucide-angular';
   selector: 'app-login',
   standalone: true,
   imports: [CommonModule, FormsModule, LucideAngularModule],
-  templateUrl: './login.html',
-  styleUrl: './login.css'
+  templateUrl: './login.html'
 })
 export class Login {
   readonly Eye = Eye;

@@ -177,6 +177,66 @@
           <p class="text-sm text-[#ef4444] text-center mb-3">{{ serverError }}</p>
         }
 
+        <!-- H9 — Nivel de restricción -->
+        <div class="bg-white rounded-2xl border border-[#e5e7eb] p-5 mt-1 mb-4">
+          <div class="flex items-center gap-2 mb-1">
+            <svg class="w-4 h-4 text-[#7c3aed] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <p class="text-sm font-bold text-[#111827]">Nivel de restricción</p>
+          </div>
+          <p class="text-xs text-[#6b7280] mb-4 leading-relaxed">
+            Controla cómo reacciona el sistema al detectar páginas o apps distractoras durante una sesión.
+            El cambio aplica a partir de la siguiente sesión.
+          </p>
+          <div class="flex flex-col gap-2">
+
+            <label class="flex items-start gap-3 p-3.5 rounded-xl border-2 cursor-pointer transition-all"
+                   [class.border-[#7c3aed]]="nivelRestriccionPendiente === 'bajo'"
+                   [class.bg-[#f5f3ff]]="nivelRestriccionPendiente === 'bajo'"
+                   [class.border-[#e5e7eb]]="nivelRestriccionPendiente !== 'bajo'">
+              <input type="radio" name="nivelRestriccion" value="bajo"
+                     [(ngModel)]="nivelRestriccionPendiente"
+                     (change)="onNivelRestriccionChange('bajo')"
+                     class="mt-0.5 accent-[#7c3aed]" />
+              <div>
+                <p class="text-sm font-bold text-[#111827]">Bajo</p>
+                <p class="text-xs text-[#6b7280] mt-0.5">Solo registra el evento. No notifica ni interrumpe.</p>
+              </div>
+            </label>
+
+            <label class="flex items-start gap-3 p-3.5 rounded-xl border-2 cursor-pointer transition-all"
+                   [class.border-[#7c3aed]]="nivelRestriccionPendiente === 'intermedio'"
+                   [class.bg-[#f5f3ff]]="nivelRestriccionPendiente === 'intermedio'"
+                   [class.border-[#e5e7eb]]="nivelRestriccionPendiente !== 'intermedio'">
+              <input type="radio" name="nivelRestriccion" value="intermedio"
+                     [(ngModel)]="nivelRestriccionPendiente"
+                     (change)="onNivelRestriccionChange('intermedio')"
+                     class="mt-0.5 accent-[#7c3aed]" />
+              <div>
+                <p class="text-sm font-bold text-[#111827]">Intermedio <span class="text-[0.65rem] text-[#7c3aed] font-semibold bg-[#ede9fe] px-1.5 py-0.5 rounded-full ml-1">Por defecto</span></p>
+                <p class="text-xs text-[#6b7280] mt-0.5">Registra el evento y muestra un aviso en pantalla.</p>
+              </div>
+            </label>
+
+            <label class="flex items-start gap-3 p-3.5 rounded-xl border-2 cursor-pointer transition-all"
+                   [class.border-[#7c3aed]]="nivelRestriccionPendiente === 'alto'"
+                   [class.bg-[#f5f3ff]]="nivelRestriccionPendiente === 'alto'"
+                   [class.border-[#e5e7eb]]="nivelRestriccionPendiente !== 'alto'">
+              <input type="radio" name="nivelRestriccion" value="alto"
+                     [(ngModel)]="nivelRestriccionPendiente"
+                     (change)="onNivelRestriccionChange('alto')"
+                     class="mt-0.5 accent-[#7c3aed]" />
+              <div>
+                <p class="text-sm font-bold text-[#111827]">Alto</p>
+                <p class="text-xs text-[#6b7280] mt-0.5">Registra el evento y bloquea el acceso mostrando una pantalla de bloqueo.</p>
+              </div>
+            </label>
+
+          </div>
+          @if (nivelGuardado) {
+            <p class="text-xs text-[#059669] font-semibold mt-3 animate-[fadeIn_0.2s_ease]">✅ Se aplicará en tu próxima sesión</p>
+          }
+        </div>
+
         <button type="submit"
                 class="w-full bg-[#7c3aed] hover:bg-[#6d28d9] text-white rounded-full py-3.5 text-base font-bold border-none cursor-pointer transition-colors font-sans mt-2 disabled:bg-[#c4b5fd] disabled:cursor-not-allowed"
                 [disabled]="isSubmitDisabled()">

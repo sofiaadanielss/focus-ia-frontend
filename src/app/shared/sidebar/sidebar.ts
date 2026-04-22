@@ -1,12 +1,12 @@
 import { Component, signal } from '@angular/core';
-import { RouterLink, Router } from '@angular/router';
+import { Router } from '@angular/router';
 import { CameraTrackingService } from '../../core/services/camera-tracking.service';
 import { TimerService } from '../../core/services/timer.service';
 
 @Component({
   selector: 'app-sidebar',
   standalone: true,
-  imports: [RouterLink],
+  imports: [],
   templateUrl: './sidebar.html',
   host: {
     'class': 'h-full'

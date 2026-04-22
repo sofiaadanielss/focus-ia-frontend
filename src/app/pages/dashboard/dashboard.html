@@ -217,3 +217,47 @@
 @if (mostrarPreferencias()) {
   <app-preferencias (cerrar)="cerrarPreferencias()" (guardado)="onPreferenciasGuardadas()"></app-preferencias>
 }
+
+<!-- H9 — Pantalla de bloqueo (nivel alto) -->
+@if (distractorBloqueado.visible) {
+  <div class="fixed inset-0 bg-[#1a0a2e]/95 flex flex-col items-center justify-center z-[3000] animate-[fadeIn_0.3s_ease]">
+    <div class="text-center max-w-[420px] px-8">
+      <div class="w-20 h-20 bg-[#ef4444]/20 rounded-full flex items-center justify-center mx-auto mb-6">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" width="40" height="40">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+        </svg>
+      </div>
+      <h2 class="text-white text-[1.6rem] font-extrabold mb-3">Acceso bloqueado durante la sesión</h2>
+      <p class="text-[#c4b5fd] text-sm mb-2">Se detectó acceso a:</p>
+      <p class="text-white font-bold text-lg mb-6 bg-[#7c3aed]/30 px-5 py-2 rounded-xl inline-block">{{ distractorBloqueado.nombre }}</p>
+      <p class="text-[#9ca3af] text-xs mb-8 leading-relaxed">
+        Tu nivel de restricción está configurado en <strong class="text-[#c4b5fd]">Alto</strong>. Esta página ha sido registrada como distractor.
+      </p>
+      <button
+        class="px-8 py-3 rounded-full font-bold text-sm text-white border border-[#7c3aed] bg-[#7c3aed]/20 hover:bg-[#7c3aed]/40 transition-colors cursor-pointer font-sans"
+        (click)="desbloquearDistractor()">
+        Continuar con la sesión
+      </button>
+    </div>
+  </div>
+}
+
+<!-- H10 — Reporte de sesión -->
+@if (mostrarReporte && reporteSesion) {
+  <div class="absolute inset-0 pointer-events-none overflow-hidden z-[1]">
+    @for (piece of confettiPieces; track $index) {
+      <div class="absolute top-[-10px] w-2 h-4 rounded-sm animate-[confettiFall_linear_forwards]"
+           [style.left]="piece.left"
+           [style.animation-delay]="piece.delay"
+           [style.animation-duration]="piece.duration"
+           [style.background-color]="piece.color">
+      </div>
+    }
+  </div>
+  <app-session-report
+    [sesion]="reporteSesion"
+    (cerrar)="cerrarReporte()"
+    (nuevaSesion)="onNuevaSesionDesdeReporte()">
+  </app-session-report>
+}

@@ -1,17 +1,19 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, ViewChild, ElementRef, signal } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { CameraTrackingService, CameraStatus, ToastEvent } from '../../core/services/camera-tracking.service';
 import { DistractionLogService } from '../../core/services/distracion-log.service';
 import { FocusService } from '../../core/services/focus.service';
 import { TimerService } from '../../core/services/timer.service';
+import { DistractorDetectionService, DistractorAction, DistractorDetectionEvent } from '../../core/services/distractor-detection.service';
 import { Sidebar } from '../../shared/sidebar/sidebar';
 import { Preferencias } from '../../features/preferencias/preferencias';
+import { SessionReportComponent, SessionReportData } from '../../shared/session-report/session-report';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [Sidebar, Preferencias],
+  imports: [Sidebar, Preferencias, SessionReportComponent],
   templateUrl: './dashboard.html'
 })
 export class Dashboard implements OnInit, OnDestroy {
@@ -30,8 +32,16 @@ export class Dashboard implements OnInit, OnDestroy {
   mostrarPreferencias = signal(false);
   _mostrarModal = false;
 
+  // H9 — bloqueo de distractores
+  distractorBloqueado: { nombre: string; visible: boolean } = { nombre: '', visible: false };
+
+  // H10 — reporte de sesión
+  reporteSesion: SessionReportData | null = null;
+  mostrarReporte = false;
+
   private toastSub!: Subscription;
   private statusSub!: Subscription;
+  private distractorSub!: Subscription;
 
   constructor(
     private router: Router,
@@ -39,7 +49,8 @@ export class Dashboard implements OnInit, OnDestroy {
     private cameraTracking: CameraTrackingService,
     private distractionLog: DistractionLogService,
     private focusService: FocusService,
-    public timerSvc: TimerService
+    public timerSvc: TimerService,
+    private distractorDetection: DistractorDetectionService
   ) {}
 
   get timerDisplay()     { return this.timerSvc.timerDisplay; }
@@ -106,11 +117,17 @@ export class Dashboard implements OnInit, OnDestroy {
       this.cameraPermisoDenegado = status === 'denied';
       this.cdr.detectChanges();
     });
+
+    // H9 — suscripción a detección de distractores
+    this.distractorSub = this.distractorDetection.deteccion$.subscribe(({ evento, accion }) => {
+      this.manejarDistractor(evento, accion);
+    });
   }
 
   ngOnDestroy() {
     this.toastSub?.unsubscribe();
     this.statusSub?.unsubscribe();
+    this.distractorSub?.unsubscribe();
   }
 
   cargarPreferencias() {
@@ -198,6 +215,9 @@ export class Dashboard implements OnInit, OnDestroy {
       horaFin: ''
     });
 
+    // H9 — iniciar monitoreo de distractores
+    this.distractorDetection.iniciarMonitoreo();
+
     this.timerSvc.iniciarTimer(
       () => this.cdr.detectChanges(),
       () => this.endSession()
@@ -229,6 +249,10 @@ export class Dashboard implements OnInit, OnDestroy {
     this.timerSvc.limpiarInterval();
     this.cameraTracking.detener();
 
+    // H9 — detener monitoreo de distractores
+    this.distractorDetection.detenerMonitoreo();
+    this.distractorBloqueado = { nombre: '', visible: false };
+
     const horaFin = this.formatearFecha(new Date());
     const completada = this.timerSvc.state.tiempoRestante <= 0;
 
@@ -238,7 +262,7 @@ export class Dashboard implements OnInit, OnDestroy {
 
     const distraccionesData = this.distractionLog.sincronizarAlFinalizar();
 
-    const sesion = {
+    const sesion: SessionReportData = {
       id: 'session_' + Date.now(),
       start_time: this.horaInicio,
       end_time: horaFin,
@@ -266,9 +290,12 @@ export class Dashboard implements OnInit, OnDestroy {
     this.loading = false;
     this.toasts = [];
 
+    // H10 — mostrar reporte automáticamente al finalizar sesión
+    this.reporteSesion = sesion;
+    this.mostrarReporte = true;
+
     if (completada) {
       this.generarConfetti();
-      this._mostrarModal = true;
     }
 
     this.cdr.detectChanges();
@@ -276,6 +303,7 @@ export class Dashboard implements OnInit, OnDestroy {
 
   nuevaSesion() {
     this.cameraTracking.detener();
+    this.distractorDetection.detenerMonitoreo();
     this.timerSvc.resetear();
     this.cameraStatus = 'idle';
     this.cameraPermisoDenegado = false;
@@ -285,6 +313,9 @@ export class Dashboard implements OnInit, OnDestroy {
     this.ultimoEventoTipo = '';
     this.error = '';
     this._mostrarModal = false;
+    this.mostrarReporte = false;
+    this.reporteSesion = null;
+    this.distractorBloqueado = { nombre: '', visible: false };
     this.cargarPreferencias();
     this.cdr.detectChanges();
   }
@@ -292,6 +323,24 @@ export class Dashboard implements OnInit, OnDestroy {
   cerrarModal() {
     this._mostrarModal = false;
     this.nuevaSesion();
+  }
+
+  // H10 — cerrar reporte sin iniciar nueva sesión
+  cerrarReporte() {
+    this.mostrarReporte = false;
+    this.reporteSesion = null;
+    this.cdr.detectChanges();
+  }
+
+  // H10 — cerrar reporte e iniciar nueva sesión
+  onNuevaSesionDesdeReporte() {
+    this.nuevaSesion();
+  }
+
+  // H9 — desbloquear manualmente
+  desbloquearDistractor() {
+    this.distractorBloqueado = { nombre: '', visible: false };
+    this.cdr.detectChanges();
   }
 
   cerrarToast(index: number) {
@@ -313,6 +362,35 @@ export class Dashboard implements OnInit, OnDestroy {
   onPreferenciasGuardadas() {
     this.cargarPreferencias();
     this.cerrarPreferencias();
+  }
+
+  private manejarDistractor(evento: DistractorDetectionEvent, accion: DistractorAction): void {
+    if (accion === 'silencio') {
+      // Nivel bajo: solo registrar, sin notificar
+      return;
+    }
+    if (accion === 'toast') {
+      // Nivel intermedio: toast en esquina inferior derecha
+      const tipo = 'distractor_' + evento.nombre;
+      const existente = this.toasts.findIndex(t => t.tipo === tipo);
+      if (existente >= 0) return;
+      const toast = {
+        tipo,
+        mensaje: `⚠️ ${evento.nombre} detectado`,
+        visible: true,
+        autoCloseTimer: null as any
+      };
+      toast.autoCloseTimer = setTimeout(() => {
+        const idx = this.toasts.indexOf(toast);
+        if (idx >= 0) { this.toasts.splice(idx, 1); this.cdr.detectChanges(); }
+      }, 6000);
+      this.toasts.push(toast);
+    }
+    if (accion === 'bloqueo') {
+      // Nivel alto: pantalla de bloqueo
+      this.distractorBloqueado = { nombre: evento.nombre, visible: true };
+    }
+    this.cdr.detectChanges();
   }
 
   private manejarToast(event: ToastEvent): void {

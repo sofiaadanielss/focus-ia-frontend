@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService, UserProfile, UpdateProfileRequest } from '../../core/auth/auth.service';
+import { DistractorDetectionService, RestrictionLevel } from '../../core/services/distractor-detection.service';
 import { Sidebar } from '../../shared/sidebar/sidebar';
 
 @Component({
@@ -36,10 +37,15 @@ export class Profile implements OnInit {
   successMessage = '';
   loading = false;
 
+  // H9 — Nivel de restricción
+  nivelRestriccionPendiente: RestrictionLevel = 'intermedio';
+  nivelGuardado = false;
+
   constructor(
     private router: Router,
     private authService: AuthService,
-    private cdr: ChangeDetectorRef) {}
+    private cdr: ChangeDetectorRef,
+    private distractorDetection: DistractorDetectionService) {}
 
   ngOnInit() {
     if (!this.authService.isLoggedIn()) {
@@ -47,6 +53,10 @@ export class Profile implements OnInit {
       return;
     }
     this.loadProfile();
+    // H9 — cargar nivel de restricción pendiente (o actual)
+    const pending = localStorage.getItem('focus_restriction_level_pending') as RestrictionLevel;
+    const current = localStorage.getItem('focus_restriction_level') as RestrictionLevel;
+    this.nivelRestriccionPendiente = pending || current || 'intermedio';
   }
 
   private loadProfile() {
@@ -184,6 +194,14 @@ export class Profile implements OnInit {
         this.loadingPassword = false;
       }
     });
+  }
+
+  // H9 — guardar nivel de restricción (aplica en la siguiente sesión)
+  onNivelRestriccionChange(nivel: RestrictionLevel) {
+    this.nivelRestriccionPendiente = nivel;
+    this.distractorDetection.setNivelRestriccion(nivel);
+    this.nivelGuardado = true;
+    setTimeout(() => { this.nivelGuardado = false; }, 3000);
   }
 
   clearSuccess() {
