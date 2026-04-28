@@ -74,6 +74,9 @@ export class AuthService {
       tap(res => {
         if (res.access_token) {
           localStorage.setItem('access_token', res.access_token);
+          // Limpiar estado de sesión anterior para que el nuevo usuario empiece limpio
+          localStorage.removeItem('focus_timer_state');
+          localStorage.removeItem('focus_session_history');
         }
       })
     );

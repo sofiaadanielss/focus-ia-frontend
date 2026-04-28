@@ -37,7 +37,8 @@
         @if (!sesionActiva && !sesionTerminada) { Sin sesión activa · {{ modoTexto }} · {{ duracionMinutos }} min }
         @if (sesionActiva && !pausado) { Sesión en curso }
         @if (sesionActiva && pausado) { Sesión en pausa }
-        @if (sesionTerminada) { Sesión finalizada }
+        @if (sesionTerminada && horaFin) { Sesión finalizada }
+        @if (sesionTerminada && !horaFin) { Iniciar sesión }
       </div>
 
       @if (sesionActiva || cameraStatus === 'requesting') {
@@ -81,6 +82,9 @@
         @if (sesionTerminada && horaFin) {
           Finalizada a las {{ horaFin }}
         }
+        @if (sesionTerminada && !horaFin) {
+          Da click en iniciar sesión después de ajustar tus preferencias
+        }
       </div>
 
       @if (error) {
@@ -114,7 +118,7 @@
         @if (sesionTerminada && !_mostrarModal) {
           <button class="px-10 py-3.5 rounded-full text-base font-bold text-white bg-[#7c3aed] hover:bg-[#6d28d9] transition-colors border-none cursor-pointer font-sans"
                   (click)="nuevaSesion()">
-            🔄 Nueva Sesión
+            {{ horaFin ? '🔄 Nueva Sesión' : '▶ Iniciar sesión' }}
           </button>
         }
       </div>
