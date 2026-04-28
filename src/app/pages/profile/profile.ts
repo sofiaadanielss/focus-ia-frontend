@@ -17,27 +17,28 @@ export class Profile implements OnInit {
   fullName = '';
   username = '';
   email = '';
-
+  
   showPasswordPanel = false;
   currentPassword = '';
   newPassword = '';
   confirmPassword = '';
+  
   currentPasswordError = '';
   newPasswordError = '';
   confirmPasswordError = '';
   loadingPassword = false;
-
+  
   showCurrentPassword = false;
   showNewPassword = false;
   showConfirmPassword = false;
-
+  
   fullNameError = '';
   usernameError = '';
   serverError = '';
   successMessage = '';
   loading = false;
 
-  // H9 — Nivel de restricción
+  // H9 Nivel de restricción
   nivelRestriccionPendiente: RestrictionLevel = 'intermedio';
   nivelGuardado = false;
 
@@ -45,7 +46,8 @@ export class Profile implements OnInit {
     private router: Router,
     private authService: AuthService,
     private cdr: ChangeDetectorRef,
-    private distractorDetection: DistractorDetectionService) {}
+    private distractorDetection: DistractorDetectionService
+  ) {}
 
   ngOnInit() {
     if (!this.authService.isLoggedIn()) {
@@ -53,6 +55,8 @@ export class Profile implements OnInit {
       return;
     }
     this.loadProfile();
+
+    // H9 cargar nivel de restricción pendiente (o actual)
     const pending = localStorage.getItem('focus_restriction_level_pending') as RestrictionLevel;
     const current = localStorage.getItem('focus_restriction_level') as RestrictionLevel;
     this.nivelRestriccionPendiente = pending || current || 'intermedio';
@@ -61,11 +65,8 @@ export class Profile implements OnInit {
   private loadProfile() {
     this.authService.getProfile().subscribe({
       next: (user: UserProfile) => {
-        const backendFullName = (user as any).full_name || '';
-        const backendUsername = (user as any).username  || '';
-
-        this.fullName = backendFullName || localStorage.getItem('profile_full_name') || '';
-        this.username = backendUsername || localStorage.getItem('profile_username') || '';
+        this.fullName = (user as any).full_name || user.name || '';
+        this.username = (user as any).username || user.name || '';
         this.email = user.email;
         this.currentName = this.fullName || this.username;
         this.cdr.markForCheck();
@@ -88,7 +89,7 @@ export class Profile implements OnInit {
 
   validateFullName() {
     if (!this.fullName.trim()) {
-      this.fullNameError = 'El nombre completo no puede estar vacío';
+      this.fullNameError = 'El nombre completo no puede estar vacio';
     } else if (this.fullName.trim().length < 3) {
       this.fullNameError = 'El nombre debe tener al menos 3 caracteres';
     } else {
@@ -114,8 +115,8 @@ export class Profile implements OnInit {
     const clean = input.value.replace(/\s/g, '');
     if (input.value !== clean) {
       input.value = clean;
-      this.username = clean;
     }
+    this.username = clean;
     this.clearSuccess();
   }
 
@@ -138,7 +139,7 @@ export class Profile implements OnInit {
     if (!this.newPassword) {
       this.newPasswordError = 'Ingresa la nueva contraseña';
     } else if (this.newPassword.length < 8) {
-      this.newPasswordError = 'Mínimo 8 caracteres';
+      this.newPasswordError = 'Minimo 8 caracteres';
     } else {
       this.newPasswordError = '';
     }
@@ -162,9 +163,12 @@ export class Profile implements OnInit {
     } else {
       this.currentPasswordError = '';
     }
+
     this.validateNewPassword();
     this.validateConfirmPassword();
+
     if (this.currentPasswordError || this.newPasswordError || this.confirmPasswordError) return;
+
     if (this.newPassword !== this.confirmPassword) {
       this.confirmPasswordError = 'Las contraseñas no coinciden';
       return;
@@ -172,10 +176,10 @@ export class Profile implements OnInit {
 
     this.loadingPassword = true;
     const updateData: UpdateProfileRequest = { password: this.newPassword };
-
+    
     this.authService.updateProfile(updateData).subscribe({
       next: () => {
-        this.successMessage = '✅ Contraseña actualizada';
+        this.successMessage = 'Contraseña actualizada';
         this.showPasswordPanel = false;
         this.currentPassword = '';
         this.newPassword = '';
@@ -198,6 +202,7 @@ export class Profile implements OnInit {
     });
   }
 
+  // H9 guardar nivel de restricción (aplica en la siguiente sesión)
   onNivelRestriccionChange(nivel: RestrictionLevel) {
     this.nivelRestriccionPendiente = nivel;
     this.distractorDetection.setNivelRestriccion(nivel);
@@ -213,7 +218,9 @@ export class Profile implements OnInit {
   onSubmit() {
     this.validateFullName();
     this.validateUsername();
+
     if (this.fullNameError || this.usernameError) return;
+
     if (!this.fullName.trim() && !this.username.trim()) {
       this.serverError = 'Debes proporcionar al menos nombre completo o nombre de usuario';
       return;
@@ -223,31 +230,22 @@ export class Profile implements OnInit {
     this.serverError = '';
     this.successMessage = '';
 
-    const localFullName = this.fullName.trim();
-    const localUsername = this.username.trim();
-
-    const updateData: UpdateProfileRequest = {};
-    if (localFullName) {
-      updateData.full_name = localFullName;
-      updateData.name = localFullName;
+    const updateData: any = {}; // Using any to handle dynamic property assignment
+    if (this.fullName.trim()) {
+      updateData.full_name = this.fullName.trim();
+      updateData.name = this.fullName.trim();
     }
-    if (localUsername) {
-      updateData.username = localUsername;
+    if (this.username.trim()) {
+      updateData.username = this.username.trim();
     }
 
     this.authService.updateProfile(updateData).subscribe({
       next: (user: UserProfile) => {
-        const savedFullName = (user as any).full_name || user.name || this.fullName;
-        const savedUsername = (user as any).username || '';
-
-        if (savedFullName) localStorage.setItem('profile_full_name', savedFullName);
-        if (savedUsername) localStorage.setItem('profile_username', savedUsername);
-
-        this.fullName = savedFullName;
-        this.username = savedUsername;
+        this.fullName = (user as any).full_name || user.name || this.fullName;
+        this.username = (user as any).username || this.username;
         this.email = user.email;
         this.currentName = this.fullName || this.username;
-        this.successMessage = '✅ Datos guardados con éxito!';
+        this.successMessage = '✓ Datos guardados con éxito!';
         this.loading = false;
         setTimeout(() => { this.successMessage = ''; }, 3000);
         this.cdr.markForCheck();
@@ -255,9 +253,8 @@ export class Profile implements OnInit {
       error: (err) => {
         const raw = err.error?.detail;
         const errorLower = (
-          typeof raw === 'string' ? raw
-          : typeof raw === 'object' && raw !== null ? (raw.code ?? raw.reason ?? JSON.stringify(raw))
-          : ''
+          typeof raw === 'string' ? raw : 
+          typeof raw === 'object' && raw != null ? (raw.code ?? raw.reason ?? JSON.stringify(raw)) : ''
         ).toLowerCase();
 
         if (errorLower.includes('username')) {
@@ -278,8 +275,6 @@ export class Profile implements OnInit {
   }
 
   onLogout() {
-    localStorage.removeItem('profile_full_name');
-    localStorage.removeItem('profile_username');
     this.authService.logout();
     this.router.navigate(['/login']);
   }
