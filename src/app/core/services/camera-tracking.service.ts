@@ -30,8 +30,8 @@ export class CameraTrackingService {
   private alertaFueraEncuadreEmitida = false;
   private alertaDesvioMiradaEmitida = false;
 
-  // Umbral en ms (5 segundos)
-  private readonly UMBRAL_MS = 5000;
+  // Umbral en ms (1 segundo)
+  private readonly UMBRAL_MS = 1000;
 
   toast$ = new Subject<ToastEvent>();
   cameraStatus$ = new Subject<CameraStatus>();
@@ -297,7 +297,7 @@ export class CameraTrackingService {
     if (this.fueraDeEncuadreStart !== null) {
       // Solo actualizar si la duración superó los 5s Y se emitió alerta
       const duracionTotal = (Date.now() - this.fueraDeEncuadreStart) / 1000;
-      if (this.alertaFueraEncuadreEmitida && duracionTotal >= 5) {
+      if (this.alertaFueraEncuadreEmitida && duracionTotal >= 1) {
         const eventos = this.distractionLog.getEventosPorTipo('fuera_de_encuadre');
         if (eventos.length > 0) {
           eventos[eventos.length - 1].duracion_segundos = Math.round(duracionTotal);
@@ -344,7 +344,7 @@ export class CameraTrackingService {
     if (this.desvioMiradaStart !== null) {
       // Solo actualizar si la duración superó los 5s Y se emitió alerta
       const duracionTotal = (Date.now() - this.desvioMiradaStart) / 1000;
-      if (this.alertaDesvioMiradaEmitida && duracionTotal >= 5) {
+      if (this.alertaDesvioMiradaEmitida && duracionTotal >= 1) {
         const eventos = this.distractionLog.getEventosPorTipo('desvio_mirada');
         if (eventos.length > 0) {
           eventos[eventos.length - 1].duracion_segundos = Math.round(duracionTotal);
@@ -365,7 +365,7 @@ export class CameraTrackingService {
   private actualizarDuracionFinalSiCorresponde(tipo: DistractionType, startTime: number | null, alertaEmitida: boolean): void {
     if (startTime !== null && alertaEmitida) {
       const duracionFinal = (Date.now() - startTime) / 1000;
-      if (duracionFinal >= 5) {
+      if (duracionFinal >= 1) {
         const eventos = this.distractionLog.getEventosPorTipo(tipo);
         if (eventos.length > 0) {
           eventos[eventos.length - 1].duracion_segundos = Math.round(duracionFinal);

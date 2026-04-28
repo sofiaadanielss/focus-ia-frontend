@@ -53,7 +53,6 @@ export class Profile implements OnInit {
       return;
     }
     this.loadProfile();
-    // H9 — cargar nivel de restricción pendiente (o actual)
     const pending = localStorage.getItem('focus_restriction_level_pending') as RestrictionLevel;
     const current = localStorage.getItem('focus_restriction_level') as RestrictionLevel;
     this.nivelRestriccionPendiente = pending || current || 'intermedio';
@@ -62,8 +61,11 @@ export class Profile implements OnInit {
   private loadProfile() {
     this.authService.getProfile().subscribe({
       next: (user: UserProfile) => {
-        this.fullName = (user as any).full_name || user.name || '';
-        this.username = (user as any).username || user.name || '';
+        const backendFullName = (user as any).full_name || '';
+        const backendUsername = (user as any).username  || '';
+
+        this.fullName = backendFullName || localStorage.getItem('profile_full_name') || '';
+        this.username = backendUsername || localStorage.getItem('profile_username') || '';
         this.email = user.email;
         this.currentName = this.fullName || this.username;
         this.cdr.markForCheck();
@@ -196,7 +198,6 @@ export class Profile implements OnInit {
     });
   }
 
-  // H9 — guardar nivel de restricción (aplica en la siguiente sesión)
   onNivelRestriccionChange(nivel: RestrictionLevel) {
     this.nivelRestriccionPendiente = nivel;
     this.distractorDetection.setNivelRestriccion(nivel);
@@ -222,19 +223,28 @@ export class Profile implements OnInit {
     this.serverError = '';
     this.successMessage = '';
 
+    const localFullName = this.fullName.trim();
+    const localUsername = this.username.trim();
+
     const updateData: UpdateProfileRequest = {};
-    if (this.fullName.trim()) {
-      updateData.full_name = this.fullName.trim();
-      updateData.name = this.fullName.trim();
+    if (localFullName) {
+      updateData.full_name = localFullName;
+      updateData.name = localFullName;
     }
-    if (this.username.trim()) {
-      updateData.username = this.username.trim();
+    if (localUsername) {
+      updateData.username = localUsername;
     }
 
     this.authService.updateProfile(updateData).subscribe({
       next: (user: UserProfile) => {
-        this.fullName = (user as any).full_name || user.name || this.fullName;
-        this.username = (user as any).username || this.username;
+        const savedFullName = (user as any).full_name || user.name || this.fullName;
+        const savedUsername = (user as any).username || '';
+
+        if (savedFullName) localStorage.setItem('profile_full_name', savedFullName);
+        if (savedUsername) localStorage.setItem('profile_username', savedUsername);
+
+        this.fullName = savedFullName;
+        this.username = savedUsername;
         this.email = user.email;
         this.currentName = this.fullName || this.username;
         this.successMessage = '✅ Datos guardados con éxito!';
@@ -268,6 +278,8 @@ export class Profile implements OnInit {
   }
 
   onLogout() {
+    localStorage.removeItem('profile_full_name');
+    localStorage.removeItem('profile_username');
     this.authService.logout();
     this.router.navigate(['/login']);
   }
