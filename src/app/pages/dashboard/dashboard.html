@@ -196,8 +196,8 @@
         }
       </div>
       <div class="relative z-[2]">
-        <span class="text-[4rem] block mb-4 animate-[bounce_0.6s_ease]">🎉</span>
-        <h2 class="font-display text-[#312e81] text-[2rem] font-extrabold mb-3">¡Felicidades!</h2>
+        <span class="text-[4rem] block mb-4 animate-[bounce_0.6s_ease]"></span>
+        <h2 class="font-sans text-[#312e81] text-[2rem] font-extrabold mb-3">¡Felicidades!</h2>
         <p class="text-[#4b5563] text-base mb-2 leading-relaxed">
           Completaste tu sesión de estudio de <strong>{{ duracionMinutos }} minutos</strong> en modo <strong>{{ modoTexto }}</strong>.
         </p>
@@ -209,7 +209,7 @@
         @if (totalDistracciones === 0) {
           <p class="text-[#4b5563] text-base mb-2 leading-relaxed">¡No se detectaron distracciones! Concentración perfecta.</p>
         }
-        <p class="text-[#7c3aed] font-bold text-lg mt-2 mb-6">¡Lograste acabar la sesión con éxito! 🚀</p>
+        <p class="text-[#7c3aed] font-bold text-lg mt-2 mb-6">¡Lograste acabar la sesión con éxito! </p>
         <button class="bg-[#7c3aed] hover:bg-[#6d28d9] text-white border-none px-11 py-3.5 rounded-full cursor-pointer font-bold text-base font-sans transition-colors" (click)="cerrarModal()">
           Cerrar
         </button>
@@ -222,7 +222,6 @@
   <app-preferencias (cerrar)="cerrarPreferencias()" (guardado)="onPreferenciasGuardadas()"></app-preferencias>
 }
 
-<!-- H9 — Pantalla de bloqueo (nivel alto) -->
 @if (distractorBloqueado.visible) {
   <div class="fixed inset-0 bg-[#1a0a2e]/95 flex flex-col items-center justify-center z-[3000] animate-[fadeIn_0.3s_ease]">
     <div class="text-center max-w-[420px] px-8">
@@ -247,7 +246,6 @@
   </div>
 }
 
-<!-- H10 — Reporte de sesión -->
 @if (mostrarReporte && reporteSesion) {
   <div class="absolute inset-0 pointer-events-none overflow-hidden z-[1]">
     @for (piece of confettiPieces; track $index) {
