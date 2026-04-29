@@ -31,7 +31,7 @@ export class CameraTrackingService {
   private alertaDesvioMiradaEmitida = false;
 
   // Umbral en ms (1 segundo)
-  private readonly UMBRAL_MS = 1000;
+  private readonly UMBRAL_MS = 500;
 
   toast$ = new Subject<ToastEvent>();
   cameraStatus$ = new Subject<CameraStatus>();
