@@ -6,6 +6,9 @@ module.exports = {
       screens: {
         'mobile': {'max': '900px'},
       },
+      transitionDuration: {
+        'DEFAULT': '75ms', // Hace que todas las transiciones duren 75ms por defecto
+      },
       colors: {
         brand: {
           DEFAULT: '#6C5FEA',

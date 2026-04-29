@@ -9,9 +9,7 @@
       <h1 class="text-[1.8rem] font-extrabold text-[#111827] mb-1">Perfil</h1>
       <p class="text-sm text-[#6b7280] mb-8">Gestiona tu información personal</p>
 
-      @if (successMessage) {
-        <div class="bg-[#ede9fe] text-[#6d28d9] text-xs font-semibold px-4 py-2 rounded-full mb-6 inline-block animate-[fadeIn_0.2s_ease]">{{ successMessage }}</div>
-      }
+      
 
       <div class="flex items-center gap-4 mb-8">
         <div class="w-16 h-16 bg-[#ede9fe] rounded-full flex items-center justify-center shrink-0">
@@ -233,7 +231,7 @@
 
           </div>
           @if (nivelGuardado) {
-            <p class="text-xs text-[#059669] font-semibold mt-3 animate-[fadeIn_0.2s_ease]">✅ Se aplicará en tu próxima sesión</p>
+            <p class="text-xs text-[#059669] font-semibold mt-3 animate-[fadeIn_0.2s_ease]">Se aplicará en tu próxima sesión</p>
           }
         </div>
 
@@ -242,13 +240,9 @@
                 [disabled]="isSubmitDisabled()">
           {{ loading ? 'Guardando...' : 'Guardar cambios' }}
         </button>
-
-        <button type="button"
-                class="w-full bg-transparent text-[#ef4444] border-2 border-[#ef4444] rounded-full py-3 text-sm font-semibold cursor-pointer hover:bg-[#fef2f2] transition-all font-sans mt-3"
-                (click)="onLogout()">
-          Cerrar sesión
-        </button>
-
+        @if (successMessage) {
+                <div class="bg-[#ede9fe] text-[#6d28d9] text-xs font-semibold px-4 py-2 rounded-full mb-6 inline-block animate-[fadeIn_0.2s_ease]">{{ successMessage }}</div>
+              }
       </form>
 
     </div>

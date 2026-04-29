@@ -156,51 +156,69 @@ export class Profile implements OnInit {
     }
   }
 
-  onChangePassword() {
-    if (!this.currentPassword) {
-      this.currentPasswordError = 'Ingresa tu contraseña actual';
-      return;
-    } else {
-      this.currentPasswordError = '';
-    }
+onChangePassword() {
+  // 1. Limpiar errores previos al iniciar para evitar estados inconsistentes
+  this.currentPasswordError = '';
+  this.serverError = '';
 
-    this.validateNewPassword();
-    this.validateConfirmPassword();
-
-    if (this.currentPasswordError || this.newPasswordError || this.confirmPasswordError) return;
-
-    if (this.newPassword !== this.confirmPassword) {
-      this.confirmPasswordError = 'Las contraseñas no coinciden';
-      return;
-    }
-
-    this.loadingPassword = true;
-    const updateData: UpdateProfileRequest = { password: this.newPassword };
-    
-    this.authService.updateProfile(updateData).subscribe({
-      next: () => {
-        this.successMessage = 'Contraseña actualizada';
-        this.showPasswordPanel = false;
-        this.currentPassword = '';
-        this.newPassword = '';
-        this.confirmPassword = '';
-        this.showCurrentPassword = false;
-        this.showNewPassword = false;
-        this.showConfirmPassword = false;
-        this.loadingPassword = false;
-        setTimeout(() => { this.successMessage = ''; }, 3000);
-      },
-      error: (err) => {
-        const detail = (err.error?.detail ?? '').toLowerCase();
-        if (detail.includes('password') || detail.includes('incorrect') || detail.includes('invalid')) {
-          this.currentPasswordError = 'Contraseña actual incorrecta';
-        } else {
-          this.serverError = 'Error al cambiar la contraseña';
-        }
-        this.loadingPassword = false;
-      }
-    });
+  // 2. Validaciones rápidas
+  if (!this.currentPassword) {
+    this.currentPasswordError = 'Ingresa tu contraseña actual';
+    return;
   }
+
+  this.validateNewPassword();
+  this.validateConfirmPassword();
+
+  if (this.currentPasswordError || this.newPasswordError || this.confirmPasswordError) return;
+
+  if (this.newPassword !== this.confirmPassword) {
+    this.confirmPasswordError = 'Las contraseñas no coinciden';
+    return;
+  }
+
+  // 3. REACCIÓN INMEDIATA: Cambiamos el estado de carga
+  this.loadingPassword = true;
+  
+  // Forzamos a Angular a que pinte el botón en estado "Cambiando..." AHORA
+  this.cdr.markForCheck(); 
+
+  const updateData: UpdateProfileRequest = { password: this.newPassword };
+  
+  this.authService.updateProfile(updateData).subscribe({
+    next: () => {
+      this.successMessage = 'Contraseña actualizada';
+      this.showPasswordPanel = false;
+      this.resetPasswordForm(); // Movido a una función aparte para limpiar el código
+      this.loadingPassword = false;
+      this.cdr.markForCheck(); // Avisamos que ya no está cargando
+      setTimeout(() => { 
+        this.successMessage = ''; 
+        this.cdr.markForCheck();
+      }, 3000);
+    },
+    error: (err) => {
+      const detail = (err.error?.detail ?? '').toLowerCase();
+      if (detail.includes('password') || detail.includes('incorrect') || detail.includes('invalid')) {
+        this.currentPasswordError = 'Contraseña actual incorrecta';
+      } else {
+        this.serverError = 'Error al cambiar la contraseña';
+      }
+      this.loadingPassword = false;
+      this.cdr.markForCheck(); // Avisamos del error para que se vea en el UI
+    }
+  });
+}
+
+// Función auxiliar para mantener limpia la lógica principal
+private resetPasswordForm() {
+  this.currentPassword = '';
+  this.newPassword = '';
+  this.confirmPassword = '';
+  this.showCurrentPassword = false;
+  this.showNewPassword = false;
+  this.showConfirmPassword = false;
+}
 
   // H9 guardar nivel de restricción (aplica en la siguiente sesión)
   onNivelRestriccionChange(nivel: RestrictionLevel) {
