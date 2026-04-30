@@ -1,6 +1,8 @@
 import { Injectable, NgZone } from '@angular/core';
 import { Subject } from 'rxjs';
 import { DistractionLogService, DistractionType } from './distracion-log.service';
+import { FaceLandmarker, FilesetResolver, NormalizedLandmark } from '@mediapipe/tasks-vision';
+import type { FaceLandmarkerResult } from '@mediapipe/tasks-vision';
 
 export type CameraStatus = 'idle' | 'requesting' | 'active' | 'denied' | 'error';
 
@@ -20,7 +22,7 @@ export class CameraTrackingService {
   private detectionInterval: any = null;
   private running = false;
 
-  private faceapi: any = null;
+  private faceLandmarker: any = null;
   private modelsLoaded = false;
 
   // Timers de distracción
@@ -30,8 +32,16 @@ export class CameraTrackingService {
   private alertaFueraEncuadreEmitida = false;
   private alertaDesvioMiradaEmitida = false;
 
-  // Umbral en ms (1 segundo)
+  // Umbral en ms
   private readonly UMBRAL_MS = 500;
+
+  // ── Índices de landmarks MediaPipe que usamos ──
+  // 478 puntos totales — solo necesitamos estos 5:
+  private readonly LM_NOSE_TIP   = 1;    // punta de la nariz
+  private readonly LM_JAW_LEFT   = 234;  // extremo izquierdo del mentón
+  private readonly LM_JAW_RIGHT  = 454;  // extremo derecho del mentón
+  private readonly LM_EYE_LEFT   = 33;   // esquina interna ojo izquierdo
+  private readonly LM_EYE_RIGHT  = 263;  // esquina interna ojo derecho
 
   toast$ = new Subject<ToastEvent>();
   cameraStatus$ = new Subject<CameraStatus>();
@@ -55,7 +65,7 @@ export class CameraTrackingService {
       await this.videoElement.play();
 
       this.cameraStatus$.next('active');
-      await this.cargarFaceApi();
+      await this.cargarMediaPipe();
       this.iniciarDeteccion();
       return true;
     } catch (err: any) {
@@ -76,7 +86,6 @@ export class CameraTrackingService {
       this.detectionInterval = null;
     }
 
-    // Actualizar duraciones finales de distracciones pendientes
     this.actualizarDuracionFinalSiCorresponde('fuera_de_encuadre', this.fueraDeEncuadreStart, this.alertaFueraEncuadreEmitida);
     this.actualizarDuracionFinalSiCorresponde('desvio_mirada', this.desvioMiradaStart, this.alertaDesvioMiradaEmitida);
 
@@ -111,155 +120,128 @@ export class CameraTrackingService {
     }
   }
 
-  // ── FIX: CDN UNIFICADO con @vladmandic/face-api ──
-  private async cargarFaceApi(): Promise<void> {
-    if (this.modelsLoaded) return;
 
-    // Usar @vladmandic/face-api para TODO (librería + modelos)
-    await this.cargarScript(
-      'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js'
+private async cargarMediaPipe(): Promise<void> {
+  if (this.modelsLoaded) return;
+
+  try {
+    const filesetResolver = await FilesetResolver.forVisionTasks(
+      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
     );
 
-    this.faceapi = (window as any).faceapi;
-
-    if (!this.faceapi) {
-      console.error('face-api.js no se pudo cargar');
-      return;
-    }
-
-    // Modelos del MISMO repositorio que la librería
-    const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model/';
-
-    try {
-      // Cargar tinyFaceDetector + faceLandmark68TinyNet (compatibles)
-      await this.faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
-      await this.faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL);
-      this.modelsLoaded = true;
-      console.log('Modelos de face-api cargados correctamente');
-    } catch (err) {
-      console.error('Error cargando modelos face-api:', err);
-      // Fallback: solo detector de rostro sin landmarks
-      try {
-        await this.faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
-        this.modelsLoaded = true;
-        console.log('Modelo tinyFaceDetector cargado (fallback sin landmarks)');
-      } catch (err2) {
-        console.error('No se pudieron cargar los modelos:', err2);
-      }
-    }
-  }
-
-  private cargarScript(src: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      // Evitar cargar el mismo script dos veces
-      if (document.querySelector(`script[src="${src}"]`)) {
-        resolve();
-        return;
-      }
-      const script = document.createElement('script');
-      script.src = src;
-      script.onload = () => resolve();
-      script.onerror = () => reject(new Error(`No se pudo cargar ${src}`));
-      document.head.appendChild(script);
+    this.faceLandmarker = await FaceLandmarker.createFromOptions(filesetResolver, {
+      baseOptions: {
+        modelAssetPath: '/assets/models/face_landmarker.task',
+        delegate: 'GPU'
+      },
+      runningMode: 'VIDEO',
+      numFaces: 1
     });
-  }
 
+    this.modelsLoaded = true;
+    console.log('MediaPipe Face Landmarker cargado correctamente');
+  } catch (err) {
+    console.error('Error cargando MediaPipe (GPU), intentando CPU...', err);
+    try {
+      const filesetResolver = await FilesetResolver.forVisionTasks(
+        'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
+      );
+
+      this.faceLandmarker = await FaceLandmarker.createFromOptions(filesetResolver, {
+        baseOptions: {
+          modelAssetPath: '/assets/models/face_landmarker.task',
+          delegate: 'CPU'
+        },
+        runningMode: 'VIDEO',
+        numFaces: 1
+      });
+
+      this.modelsLoaded = true;
+      console.log('MediaPipe cargado en modo CPU (fallback)');
+    } catch (err2) {
+      console.error('No se pudo cargar MediaPipe ni en CPU:', err2);
+    }
+  }
+}
+
+  // ── Loop de detección ──
   private iniciarDeteccion(): void {
     if (this.running) return;
     this.running = true;
 
+    let lastTimestamp = -1;
+
     this.detectionInterval = setInterval(async () => {
-      if (!this.running || !this.videoElement || !this.faceapi || !this.modelsLoaded) return;
+      if (!this.running || !this.videoElement || !this.faceLandmarker || !this.modelsLoaded) return;
+      if (this.videoElement.readyState < 2) return; // video aún no listo
 
       try {
-        const options = new this.faceapi.TinyFaceDetectorOptions({
-          inputSize: 224,
-          scoreThreshold: 0.5
-        });
+        const timestamp = performance.now();
 
-        let detections: any[] = [];
-        
-        // Verificar si tenemos landmarks disponibles
-        const hasLandmarks = this.faceapi.nets.faceLandmark68TinyNet?.isLoaded;
-        
-        if (hasLandmarks) {
-          try {
-            detections = await this.faceapi
-              .detectAllFaces(this.videoElement, options)
-              .withFaceLandmarks(true);
-          } catch (e) {
-            // Fallback: solo detección de rostro
-            const rawDetections = await this.faceapi.detectAllFaces(this.videoElement, options);
-            detections = rawDetections.map((d: any) => ({ detection: d, landmarks: null }));
-          }
-        } else {
-          // Solo detección de rostro sin landmarks
-          const rawDetections = await this.faceapi.detectAllFaces(this.videoElement, options);
-          detections = rawDetections.map((d: any) => ({ detection: d, landmarks: null }));
-        }
+        // MediaPipe requiere timestamps estrictamente crecientes
+        if (timestamp <= lastTimestamp) return;
+        lastTimestamp = timestamp;
+
+        const result: FaceLandmarkerResult = this.faceLandmarker.detectForVideo(
+          this.videoElement,
+          timestamp
+        );
 
         this.ngZone.run(() => {
-          this.procesarDetecciones(detections);
+          this.procesarDetecciones(result);
         });
       } catch (e) {
-        // Silenciar errores intermitentes
+        // Silenciar errores intermitentes de frame
       }
     }, 500);
   }
 
-  private procesarDetecciones(detections: any[]): void {
+  // ── Procesamiento de resultados ──
+  private procesarDetecciones(result: FaceLandmarkerResult): void {
     const ahora = Date.now();
+    const hayRostro = result.faceLandmarks && result.faceLandmarks.length > 0;
 
-    if (!detections || detections.length === 0) {
-      // Criterio ⑥: no se detecta rostro → fuera de encuadre
+    if (!hayRostro) {
       this.procesarFueraDeEncuadre(ahora);
       this.resetDesvioMirada();
     } else {
-      // Rostro detectado → resetear fuera de encuadre
       this.resetFueraDeEncuadre();
 
-      // Criterio ④ y ⑤: analizar dirección de mirada
-      const landmarks = detections[0]?.landmarks ?? null;
+      const landmarks = result.faceLandmarks[0];
+      const mirandoPantalla = this.analizarMirada(landmarks);
 
-      if (landmarks && landmarks.getNose && landmarks.getJawOutline) {
-        const mirandoPantalla = this.analizarMirada(landmarks);
-        if (!mirandoPantalla) {
-          this.procesarDesvioMirada(ahora);
-        } else {
-          this.resetDesvioMirada();
-        }
+      if (!mirandoPantalla) {
+        this.procesarDesvioMirada(ahora);
       } else {
-        // Sin landmarks disponibles: solo detectamos presencia, no mirada
         this.resetDesvioMirada();
       }
     }
   }
 
-  private analizarMirada(landmarks: any): boolean {
-    if (!landmarks) return true;
+  // ── Análisis de mirada con índices MediaPipe ──
+  private analizarMirada(landmarks: NormalizedLandmark[]): boolean {
+    if (!landmarks || landmarks.length < 478) return true;
 
     try {
-      const nose = landmarks.getNose();
-      const jaw = landmarks.getJawOutline();
-      const leftEye = landmarks.getLeftEye();
-      const rightEye = landmarks.getRightEye();
+      const noseTip   = landmarks[this.LM_NOSE_TIP];
+      const jawLeft   = landmarks[this.LM_JAW_LEFT];
+      const jawRight  = landmarks[this.LM_JAW_RIGHT];
+      const eyeLeft   = landmarks[this.LM_EYE_LEFT];
+      const eyeRight  = landmarks[this.LM_EYE_RIGHT];
 
-      if (!nose || !jaw || !leftEye || !rightEye) return true;
+      if (!noseTip || !jawLeft || !jawRight || !eyeLeft || !eyeRight) return true;
 
-      const noseTip = nose[3] || nose[nose.length - 1];
-      const jawLeft = jaw[0];
-      const jawRight = jaw[jaw.length - 1];
       const faceCenterX = (jawLeft.x + jawRight.x) / 2;
-      const faceWidth = Math.abs(jawRight.x - jawLeft.x);
+      const faceWidth   = Math.abs(jawRight.x - jawLeft.x);
 
       const desvioHorizontal = Math.abs(noseTip.x - faceCenterX) / (faceWidth || 1);
 
-      const eyeCenterY = (leftEye[0].y + rightEye[0].y) / 2;
-      const faceHeight = Math.abs(noseTip.y - eyeCenterY);
+      const eyeCenterY  = (eyeLeft.y + eyeRight.y) / 2;
+      const faceHeight  = Math.abs(noseTip.y - eyeCenterY);
       const desvioVertical = (noseTip.y - eyeCenterY) / (faceHeight || 1);
 
       const mirandoHorizontal = desvioHorizontal < 0.38;
-      const mirandoVertical = desvioVertical > 0 && desvioVertical < 2.5;
+      const mirandoVertical   = desvioVertical > 0 && desvioVertical < 2.5;
 
       return mirandoHorizontal && mirandoVertical;
     } catch (e) {
@@ -268,7 +250,7 @@ export class CameraTrackingService {
     }
   }
 
-  // ── Fuera de encuadre (Criterio ⑥) ──
+  // ── Fuera de encuadre ──
   private procesarFueraDeEncuadre(ahora: number): void {
     if (this.fueraDeEncuadreStart === null) {
       this.fueraDeEncuadreStart = ahora;
@@ -277,14 +259,9 @@ export class CameraTrackingService {
 
     const duracion = ahora - this.fueraDeEncuadreStart;
 
-    // Criterio ⑥: Solo registrar si supera los 5 segundos
     if (duracion >= this.UMBRAL_MS && !this.alertaFueraEncuadreEmitida) {
       this.alertaFueraEncuadreEmitida = true;
-      
-      // Registrar evento con duración actual (5 segundos o más)
       this.distractionLog.registrarEvento('fuera_de_encuadre', duracion / 1000);
-
-      // Criterio ⑪: mensaje exacto
       this.toast$.next({
         tipo: 'fuera_de_encuadre',
         mensaje: 'No se detecta tu rostro',
@@ -295,7 +272,6 @@ export class CameraTrackingService {
 
   private resetFueraDeEncuadre(): void {
     if (this.fueraDeEncuadreStart !== null) {
-      // Solo actualizar si la duración superó los 5s Y se emitió alerta
       const duracionTotal = (Date.now() - this.fueraDeEncuadreStart) / 1000;
       if (this.alertaFueraEncuadreEmitida && duracionTotal >= 1) {
         const eventos = this.distractionLog.getEventosPorTipo('fuera_de_encuadre');
@@ -305,8 +281,6 @@ export class CameraTrackingService {
       }
       this.fueraDeEncuadreStart = null;
       this.alertaFueraEncuadreEmitida = false;
-
-      // Criterio ⑫: descartar toast cuando usuario retoma encuadre
       this.toast$.next({
         tipo: 'fuera_de_encuadre',
         mensaje: '',
@@ -315,7 +289,7 @@ export class CameraTrackingService {
     }
   }
 
-  // ── Desvío de mirada (Criterio ⑤) ──
+  // ── Desvío de mirada ──
   private procesarDesvioMirada(ahora: number): void {
     if (this.desvioMiradaStart === null) {
       this.desvioMiradaStart = ahora;
@@ -324,14 +298,9 @@ export class CameraTrackingService {
 
     const duracion = ahora - this.desvioMiradaStart;
 
-    // Criterio ⑤: Solo registrar si supera los 5 segundos
     if (duracion >= this.UMBRAL_MS && !this.alertaDesvioMiradaEmitida) {
       this.alertaDesvioMiradaEmitida = true;
-      
-      // Registrar evento con duración actual (5 segundos o más)
       this.distractionLog.registrarEvento('desvio_mirada', duracion / 1000);
-
-      // Criterio ⑪: mensaje exacto
       this.toast$.next({
         tipo: 'desvio_mirada',
         mensaje: 'Desvío de mirada detectado',
@@ -342,7 +311,6 @@ export class CameraTrackingService {
 
   private resetDesvioMirada(): void {
     if (this.desvioMiradaStart !== null) {
-      // Solo actualizar si la duración superó los 5s Y se emitió alerta
       const duracionTotal = (Date.now() - this.desvioMiradaStart) / 1000;
       if (this.alertaDesvioMiradaEmitida && duracionTotal >= 1) {
         const eventos = this.distractionLog.getEventosPorTipo('desvio_mirada');
@@ -352,8 +320,6 @@ export class CameraTrackingService {
       }
       this.desvioMiradaStart = null;
       this.alertaDesvioMiradaEmitida = false;
-
-      // Criterio ⑫: descartar toast cuando usuario retoma la mirada
       this.toast$.next({
         tipo: 'desvio_mirada',
         mensaje: '',
