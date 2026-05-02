@@ -36,7 +36,7 @@ module.exports = {
       },
       fontFamily: {
         sans:    ['DM Sans', 'sans-serif'],
-        display: ['Merriweather', 'serif'],
+        display: ['Plus Jakarta Sans', 'sans-serif'],
       },
       fontSize: {
         'label': ['0.65rem', { letterSpacing: '0.12em', fontWeight: '600' }],

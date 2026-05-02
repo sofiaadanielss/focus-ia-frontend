@@ -1,0 +1,128 @@
+<!-- ═══════════════════════════════════════════════════════════════
+    Pantalla completada
+════════════════════════════════════════════════════════════════ -->
+@if (completado()) {
+  <div class="flex flex-col items-center justify-center w-screen h-screen bg-[#F3F4F6] px-6">
+    <div class="bg-white rounded-3xl shadow-lg p-10 max-w-sm w-full text-center">
+      <div class="w-16 h-16 rounded-full bg-[#EDE9FE] flex items-center justify-center mx-auto mb-6">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+          <path d="M5 13l4 4L19 7" stroke="#7C3AED" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <h2 class="font-display font-bold text-[#111827] text-xl mb-2">¡Cuestionario completado!</h2>
+      <p class="text-[#6B7280] text-lg leading-relaxed mb-8">
+        Tus respuestas han sido registradas. Recuerda que este cuestionario es orientativo y no constituye un diagnóstico clínico.
+      </p>
+      <button
+        class="w-full h-12 bg-[#7C3AED] hover:bg-[#6D28D9] text-white font-bold text-sm rounded-full transition-colors duration-150 cursor-pointer border-none"
+        (click)="irAlDashboard()"
+      >
+        Ir al Dashboard
+      </button>
+    </div>
+  </div>
+}
+
+<!-- ═══════════════════════════════════════════════════════════════
+    Cuestionario activo
+════════════════════════════════════════════════════════════════ -->
+@if (!completado()) {
+  <div class="flex flex-col items-center justify-center min-h-screen bg-[#F3F4F6] px-[5vw] py-[4vh] font-sans">
+
+    <!-- Logo + título -->
+    <div class="w-[90vw] max-w-5xl mb-[2vh]">
+      <div class="flex items-center gap-2 mb-5">
+        <div class="w-16 h-16 rounded-lg bg-[#7C3AED] flex items-center justify-center p-2">
+          <img src="/assets/logo.png" class="w-full h-full object-contain invert" />
+        </div>
+        <span class="font-bold text-[#111827] text-2xl tracking-wide">Focus AI</span>
+      </div>
+
+      <h1 class="font-display font-bold text-[#111827] text-3xl text-center">
+        Para comenzar responde
+      </h1>
+    </div>
+
+    <!-- Tarjeta de preguntas -->
+    <div class="w-[90vw] max-w-5xl min-h-[55vh] bg-[#7C3AED] rounded-3xl p-[4vh_3vw] shadow-lg relative flex flex-col justify-between">
+
+      <!-- Lista de preguntas de la página actual -->
+      <div class="flex flex-col gap-7">
+        @for (pregunta of preguntasPaginaActual(); track pregunta.id) {
+          <div class="flex flex-col items-center gap-2">
+            <!-- Texto de la pregunta -->
+            <p class="text-white font-semibold text-2xl text-center leading-snug px-4">
+            {{ pregunta.texto }}
+            </p>
+
+            <!-- Opciones -->
+            <div class="flex gap-3">
+              <!-- De acuerdo -->
+              <button
+                class="px-6 py-2.5 rounded-full text-lg font-semibold border-2 transition-all duration-150 cursor-pointer"
+                [class]="getRespuesta(pregunta.id) === 'de_acuerdo'
+                  ? 'bg-[#7C3AED] border-white text-white shadow-md scale-105'
+                  : 'bg-white/20 border-white/40 text-white hover:bg-white/30'"
+                (click)="responder(pregunta.id, 'de_acuerdo')"
+              >
+                De acuerdo
+              </button>
+
+              <button
+                class="px-6 py-2.5 rounded-full text-lg font-semibold border-2 transition-all duration-150 cursor-pointer"
+                [class]="getRespuesta(pregunta.id) === 'en_desacuerdo'
+                  ? 'bg-white border-white text-[#7C3AED] shadow-md scale-105'
+                  : 'bg-white/20 border-white/40 text-white hover:bg-white/30'"
+                (click)="responder(pregunta.id, 'en_desacuerdo')"
+              >
+                Desacuerdo
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+
+      <p class="absolute bottom-4 right-5 text-white/60 text-sm font-medium">
+        {{ numeroPaginaDisplay() }}/{{ totalPaginas() }}
+      </p>
+
+    </div>
+
+    <div class="w-[90vw] max-w-5xl mt-[2vh]">
+      <div class="w-full h-1.5 bg-[#E5E7EB] rounded-full overflow-hidden">
+        <div
+          class="h-full bg-[#7C3AED] rounded-full transition-all duration-500"
+          [style.width.%]="(paginaActual() / totalPaginas()) * 100 + (paginaCompleta() ? (1 / totalPaginas()) * 100 : 0)"
+        ></div>
+      </div>
+    </div>
+
+    <div class="w-[90vw] max-w-5xl mt-[2vh]">
+      <button
+        class="w-full h-12 rounded-full font-display font-bold text-lg tracking-wide border-none transition-all duration-150"
+        [class]="paginaCompleta()
+          ? 'bg-[#7C3AED] hover:bg-[#6D28D9] text-white cursor-pointer'
+          : 'bg-[#E5E7EB] text-[#9CA3AF] cursor-not-allowed'"
+        [disabled]="!paginaCompleta() || enviando()"
+        (click)="siguientePagina()"
+      >
+        @if (enviando()) {
+          Enviando...
+        } @else if (esUltimaPagina()) {
+          FINALIZAR
+        } @else {
+          CONTINUAR
+        }
+      </button>
+
+      @if (errorServidor()) {
+        <p class="text-xs text-red-400 text-center mt-3">{{ errorServidor() }}</p>
+      }
+    </div>
+
+    <p class="text-[#9CA3AF] text-xs text-center mt-6 max-w-xs leading-relaxed">
+      Este cuestionario es orientativo y no constituye un diagnóstico clínico. Sus resultados son accesibles únicamente para el equipo de Focus AI.
+    </p>
+
+  </div>
+}

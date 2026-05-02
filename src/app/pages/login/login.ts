@@ -189,7 +189,13 @@ export class Login {
       next: () => {
         this.resetFailedAttempts();
         this.successMessage.set('Inicio de sesión exitoso');
-        this.router.navigate(['/dashboard']);
+        // Si nunca completó el cuestionario TDAH, redirigir ahí primero
+        const tdahCompletado = localStorage.getItem('adhd_questionnaire_completed');
+        if (!tdahCompletado) {
+          this.router.navigate(['/adhd']);
+        } else {
+          this.router.navigate(['/dashboard']);
+        }
       },
       error: (err) => {
         const errorMsg = err.error?.detail || 'Correo o contraseña incorrectos';
@@ -223,7 +229,11 @@ export class Login {
       email: this.email(),
       password: this.password()
     }).subscribe({
-      next: () => { this.showModal.set(true); },
+      next: () => {
+        // Limpiar flag del cuestionario para el nuevo usuario
+        localStorage.removeItem('adhd_questionnaire_completed');
+        this.showModal.set(true);
+      },
       error: (err) => {
         const raw = err.error?.detail;
         const detail = (
