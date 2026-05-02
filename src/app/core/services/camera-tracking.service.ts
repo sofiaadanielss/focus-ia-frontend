@@ -25,23 +25,29 @@ export class CameraTrackingService {
   private faceLandmarker: any = null;
   private modelsLoaded = false;
 
-  // Timers de distracción
   private fueraDeEncuadreStart: number | null = null;
   private desvioMiradaStart: number | null = null;
 
   private alertaFueraEncuadreEmitida = false;
   private alertaDesvioMiradaEmitida = false;
 
-  // Umbral en ms
-  private readonly UMBRAL_MS = 500;
+  private readonly UMBRAL_MS = 1000;
 
-  // ── Índices de landmarks MediaPipe que usamos ──
-  // 478 puntos totales — solo necesitamos estos 5:
-  private readonly LM_NOSE_TIP   = 1;    // punta de la nariz
-  private readonly LM_JAW_LEFT   = 234;  // extremo izquierdo del mentón
-  private readonly LM_JAW_RIGHT  = 454;  // extremo derecho del mentón
-  private readonly LM_EYE_LEFT   = 33;   // esquina interna ojo izquierdo
-  private readonly LM_EYE_RIGHT  = 263;  // esquina interna ojo derecho
+  private gazeBaseline: { h: number; v: number; headPitch: number; headYaw: number } | null = null;
+  private calibrationSamples: { h: number; v: number; headPitch: number; headYaw: number }[] = [];
+  private readonly CALIBRATION_FRAMES = 15;
+  private calibrated = false;
+
+  private readonly GAZE_H_THRESHOLD = 0.08;
+  private readonly GAZE_V_THRESHOLD = 0.09;
+  private readonly HEAD_PITCH_THRESHOLD = 0.06;
+  private readonly HEAD_YAW_THRESHOLD = 0.08;
+  private readonly FALLBACK_H_MIN = 0.32;
+  private readonly FALLBACK_H_MAX = 0.68;
+  private readonly FALLBACK_V_MIN = 0.30;
+  private readonly FALLBACK_V_MAX = 0.78;
+  private readonly FALLBACK_YAW = 0.18;
+  private readonly FALLBACK_PITCH = 0.28;
 
   toast$ = new Subject<ToastEvent>();
   cameraStatus$ = new Subject<CameraStatus>();
@@ -102,6 +108,9 @@ export class CameraTrackingService {
     this.desvioMiradaStart = null;
     this.alertaFueraEncuadreEmitida = false;
     this.alertaDesvioMiradaEmitida = false;
+    this.calibrated = false;
+    this.gazeBaseline = null;
+    this.calibrationSamples = [];
 
     this.cameraStatus$.next('idle');
   }
@@ -112,6 +121,9 @@ export class CameraTrackingService {
       clearInterval(this.detectionInterval);
       this.detectionInterval = null;
     }
+    this.calibrated = false;
+    this.gazeBaseline = null;
+    this.calibrationSamples = [];
   }
 
   reanudar(): void {
@@ -120,28 +132,9 @@ export class CameraTrackingService {
     }
   }
 
+  private async cargarMediaPipe(): Promise<void> {
+    if (this.modelsLoaded) return;
 
-private async cargarMediaPipe(): Promise<void> {
-  if (this.modelsLoaded) return;
-
-  try {
-    const filesetResolver = await FilesetResolver.forVisionTasks(
-      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
-    );
-
-    this.faceLandmarker = await FaceLandmarker.createFromOptions(filesetResolver, {
-      baseOptions: {
-        modelAssetPath: '/assets/models/face_landmarker.task',
-        delegate: 'GPU'
-      },
-      runningMode: 'VIDEO',
-      numFaces: 1
-    });
-
-    this.modelsLoaded = true;
-    console.log('MediaPipe Face Landmarker cargado correctamente');
-  } catch (err) {
-    console.error('Error cargando MediaPipe (GPU), intentando CPU...', err);
     try {
       const filesetResolver = await FilesetResolver.forVisionTasks(
         'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
@@ -150,21 +143,38 @@ private async cargarMediaPipe(): Promise<void> {
       this.faceLandmarker = await FaceLandmarker.createFromOptions(filesetResolver, {
         baseOptions: {
           modelAssetPath: '/assets/models/face_landmarker.task',
-          delegate: 'CPU'
+          delegate: 'GPU'
         },
         runningMode: 'VIDEO',
         numFaces: 1
       });
 
       this.modelsLoaded = true;
-      console.log('MediaPipe cargado en modo CPU (fallback)');
-    } catch (err2) {
-      console.error('No se pudo cargar MediaPipe ni en CPU:', err2);
+      console.log('MediaPipe Face Landmarker cargado correctamente');
+    } catch (err) {
+      console.error('Error cargando MediaPipe (GPU), intentando CPU...', err);
+      try {
+        const filesetResolver = await FilesetResolver.forVisionTasks(
+          'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
+        );
+
+        this.faceLandmarker = await FaceLandmarker.createFromOptions(filesetResolver, {
+          baseOptions: {
+            modelAssetPath: '/assets/models/face_landmarker.task',
+            delegate: 'CPU'
+          },
+          runningMode: 'VIDEO',
+          numFaces: 1
+        });
+
+        this.modelsLoaded = true;
+        console.log('MediaPipe cargado en modo CPU (fallback)');
+      } catch (err2) {
+        console.error('No se pudo cargar MediaPipe ni en CPU:', err2);
+      }
     }
   }
-}
 
-  // ── Loop de detección ──
   private iniciarDeteccion(): void {
     if (this.running) return;
     this.running = true;
@@ -173,12 +183,11 @@ private async cargarMediaPipe(): Promise<void> {
 
     this.detectionInterval = setInterval(async () => {
       if (!this.running || !this.videoElement || !this.faceLandmarker || !this.modelsLoaded) return;
-      if (this.videoElement.readyState < 2) return; // video aún no listo
+      if (this.videoElement.readyState < 2) return;
 
       try {
         const timestamp = performance.now();
 
-        // MediaPipe requiere timestamps estrictamente crecientes
         if (timestamp <= lastTimestamp) return;
         lastTimestamp = timestamp;
 
@@ -190,13 +199,10 @@ private async cargarMediaPipe(): Promise<void> {
         this.ngZone.run(() => {
           this.procesarDetecciones(result);
         });
-      } catch (e) {
-        // Silenciar errores intermitentes de frame
-      }
+      } catch (e) {}
     }, 500);
   }
 
-  // ── Procesamiento de resultados ──
   private procesarDetecciones(result: FaceLandmarkerResult): void {
     const ahora = Date.now();
     const hayRostro = result.faceLandmarks && result.faceLandmarks.length > 0;
@@ -218,39 +224,122 @@ private async cargarMediaPipe(): Promise<void> {
     }
   }
 
-  // ── Análisis de mirada con índices MediaPipe ──
+  private validarRostroCentrado(landmarks: NormalizedLandmark[]): boolean {
+    const NOSE_TIP  = landmarks[1];
+    const JAW_LEFT  = landmarks[234];
+    const JAW_RIGHT = landmarks[454];
+    const FOREHEAD  = landmarks[10];
+    const CHIN      = landmarks[152];
+
+    if (!NOSE_TIP || !JAW_LEFT || !JAW_RIGHT || !FOREHEAD || !CHIN) return false;
+
+    const faceCenterX = (JAW_LEFT.x + JAW_RIGHT.x) / 2;
+    const faceWidth   = Math.abs(JAW_RIGHT.x - JAW_LEFT.x) + 0.001;
+    const yawOffset   = Math.abs(NOSE_TIP.x - faceCenterX) / faceWidth;
+
+    const faceCenterY = (FOREHEAD.y + CHIN.y) / 2;
+    const faceHeight  = Math.abs(CHIN.y - FOREHEAD.y) + 0.001;
+    const pitchOffset = Math.abs(NOSE_TIP.y - faceCenterY) / faceHeight;
+
+    const narizCentradaEnPantalla = NOSE_TIP.x > 0.25 && NOSE_TIP.x < 0.75;
+    const cabezaRecta = yawOffset < 0.15 && pitchOffset < 0.25;
+
+    return narizCentradaEnPantalla && cabezaRecta;
+  }
+
   private analizarMirada(landmarks: NormalizedLandmark[]): boolean {
     if (!landmarks || landmarks.length < 478) return true;
 
     try {
-      const noseTip   = landmarks[this.LM_NOSE_TIP];
-      const jawLeft   = landmarks[this.LM_JAW_LEFT];
-      const jawRight  = landmarks[this.LM_JAW_RIGHT];
-      const eyeLeft   = landmarks[this.LM_EYE_LEFT];
-      const eyeRight  = landmarks[this.LM_EYE_RIGHT];
+      const datos = this.calcularGazeRatios(landmarks);
+      if (!datos) return true;
 
-      if (!noseTip || !jawLeft || !jawRight || !eyeLeft || !eyeRight) return true;
+      if (!this.calibrated) {
+        const rostroValido = this.validarRostroCentrado(landmarks);
 
-      const faceCenterX = (jawLeft.x + jawRight.x) / 2;
-      const faceWidth   = Math.abs(jawRight.x - jawLeft.x);
+        if (rostroValido) {
+          this.calibrationSamples.push(datos);
+        }
 
-      const desvioHorizontal = Math.abs(noseTip.x - faceCenterX) / (faceWidth || 1);
+        if (this.calibrationSamples.length >= this.CALIBRATION_FRAMES) {
+          const len = this.calibrationSamples.length;
+          this.gazeBaseline = {
+            h: this.calibrationSamples.reduce((s, g) => s + g.h, 0) / len,
+            v: this.calibrationSamples.reduce((s, g) => s + g.v, 0) / len,
+            headPitch: this.calibrationSamples.reduce((s, g) => s + g.headPitch, 0) / len,
+            headYaw: this.calibrationSamples.reduce((s, g) => s + g.headYaw, 0) / len,
+          };
+          this.calibrated = true;
+          console.log('Gaze calibrado — baseline:', this.gazeBaseline);
+        }
 
-      const eyeCenterY  = (eyeLeft.y + eyeRight.y) / 2;
-      const faceHeight  = Math.abs(noseTip.y - eyeCenterY);
-      const desvioVertical = (noseTip.y - eyeCenterY) / (faceHeight || 1);
+        const hOk = datos.h > this.FALLBACK_H_MIN && datos.h < this.FALLBACK_H_MAX;
+        const vOk = datos.v > this.FALLBACK_V_MIN && datos.v < this.FALLBACK_V_MAX;
+        const yawOk = Math.abs(datos.headYaw) < this.FALLBACK_YAW;
+        const pitchOk = Math.abs(datos.headPitch) < this.FALLBACK_PITCH;
 
-      const mirandoHorizontal = desvioHorizontal < 0.38;
-      const mirandoVertical   = desvioVertical > 0 && desvioVertical < 2.5;
+        return hOk && vOk && yawOk && pitchOk;
+      }
 
-      return mirandoHorizontal && mirandoVertical;
+      const dH = Math.abs(datos.h - this.gazeBaseline!.h);
+      const dV = Math.abs(datos.v - this.gazeBaseline!.v);
+      const dPitch = Math.abs(datos.headPitch - this.gazeBaseline!.headPitch);
+      const dYaw = Math.abs(datos.headYaw - this.gazeBaseline!.headYaw);
+
+      const irisOk = dH < this.GAZE_H_THRESHOLD && dV < this.GAZE_V_THRESHOLD;
+      const headOk = dPitch < this.HEAD_PITCH_THRESHOLD && dYaw < this.HEAD_YAW_THRESHOLD;
+
+      return irisOk && headOk;
     } catch (e) {
       console.warn('Error analizando mirada:', e);
       return true;
     }
   }
 
-  // ── Fuera de encuadre ──
+  private calcularGazeRatios(landmarks: NormalizedLandmark[]): { h: number; v: number; headPitch: number; headYaw: number } | null {
+    const LEFT_IRIS  = landmarks[468];
+    const RIGHT_IRIS = landmarks[473];
+
+    const LEFT_EYE_LEFT   = landmarks[33];
+    const LEFT_EYE_RIGHT  = landmarks[133];
+    const LEFT_EYE_TOP    = landmarks[159];
+    const LEFT_EYE_BOTTOM = landmarks[145];
+
+    const RIGHT_EYE_LEFT   = landmarks[362];
+    const RIGHT_EYE_RIGHT  = landmarks[263];
+    const RIGHT_EYE_TOP    = landmarks[386];
+    const RIGHT_EYE_BOTTOM = landmarks[374];
+
+    const NOSE_TIP  = landmarks[1];
+    const FOREHEAD  = landmarks[10];
+    const CHIN      = landmarks[152];
+    const JAW_LEFT  = landmarks[234];
+    const JAW_RIGHT = landmarks[454];
+
+    if (!LEFT_IRIS || !RIGHT_IRIS || !NOSE_TIP || !FOREHEAD || !CHIN || !JAW_LEFT || !JAW_RIGHT) return null;
+
+    const leftH  = (LEFT_IRIS.x  - LEFT_EYE_LEFT.x)  / (LEFT_EYE_RIGHT.x  - LEFT_EYE_LEFT.x  + 0.001);
+    const rightH = (RIGHT_IRIS.x - RIGHT_EYE_LEFT.x) / (RIGHT_EYE_RIGHT.x - RIGHT_EYE_LEFT.x + 0.001);
+
+    const leftV  = (LEFT_IRIS.y  - LEFT_EYE_TOP.y)  / (LEFT_EYE_BOTTOM.y  - LEFT_EYE_TOP.y  + 0.001);
+    const rightV = (RIGHT_IRIS.y - RIGHT_EYE_TOP.y) / (RIGHT_EYE_BOTTOM.y - RIGHT_EYE_TOP.y + 0.001);
+
+    const faceCenterX = (JAW_LEFT.x + JAW_RIGHT.x) / 2;
+    const faceWidth   = Math.abs(JAW_RIGHT.x - JAW_LEFT.x) + 0.001;
+    const headYaw     = (NOSE_TIP.x - faceCenterX) / faceWidth;
+
+    const faceCenterY = (FOREHEAD.y + CHIN.y) / 2;
+    const faceHeight  = Math.abs(CHIN.y - FOREHEAD.y) + 0.001;
+    const headPitch   = (NOSE_TIP.y - faceCenterY) / faceHeight;
+
+    return {
+      h: (leftH + rightH) / 2,
+      v: (leftV + rightV) / 2,
+      headPitch,
+      headYaw,
+    };
+  }
+
   private procesarFueraDeEncuadre(ahora: number): void {
     if (this.fueraDeEncuadreStart === null) {
       this.fueraDeEncuadreStart = ahora;
@@ -289,7 +378,6 @@ private async cargarMediaPipe(): Promise<void> {
     }
   }
 
-  // ── Desvío de mirada ──
   private procesarDesvioMirada(ahora: number): void {
     if (this.desvioMiradaStart === null) {
       this.desvioMiradaStart = ahora;
