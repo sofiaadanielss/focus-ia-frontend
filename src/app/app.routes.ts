@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { Login } from './pages/login/login';
 import { Profile } from './pages/profile/profile';
 import { Dashboard } from './pages/dashboard/dashboard';
+import { IqComponent } from './pages/iq/iq';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
@@ -9,5 +10,6 @@ export const routes: Routes = [
   { path: 'register', component: Login },
   { path: 'profile', component: Profile },
   { path: 'dashboard', component: Dashboard },
+  { path: 'iq', component: IqComponent }
 ];
 

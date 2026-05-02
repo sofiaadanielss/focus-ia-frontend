@@ -2,7 +2,9 @@
 
   <app-sidebar></app-sidebar>
 
-  <main class="flex-1 px-[52px] py-10 overflow-y-auto flex flex-col gap-4 mobile:px-6 mobile:items-center mobile:pt-16">
+  <main class="flex-1 px-[52px] py-10 overflow-y-auto mobile:px-6 mobile:pt-16">
+    <div class="flex gap-6 items-start flex-wrap">
+    <div class="flex flex-col gap-4 flex-1 min-w-[320px] max-w-[520px]">
 
     <div class="mb-2">
       <h1 class="text-[1.8rem] font-extrabold text-[#111827]">Panel Principal</h1>
@@ -141,13 +143,13 @@
     </div>
 
     @if (sesionTerminada && totalDistracciones > 0) {
-      <div class="bg-white rounded-2xl p-6 border border-[#e5e7eb] max-w-[520px]">
+      <div class="bg-white rounded-2xl p-6 border border-[#e5e7eb]">
         <h3 class="text-base font-bold text-[#111827] mb-2">Resumen de Distracciones</h3>
         <p class="text-sm text-[#6b7280] leading-relaxed">Se detectaron <strong>{{ totalDistracciones }}</strong> distracción{{ totalDistracciones > 1 ? 'es' : '' }} durante la sesión.</p>
       </div>
     }
 
-    <div class="flex items-center gap-4 bg-white rounded-2xl px-6 py-5 border border-[#e5e7eb] max-w-[520px] cursor-pointer hover:border-[#7c3aed] hover:shadow-[0_4px_12px_rgba(124,58,237,0.08)] transition-all" (click)="abrirPreferencias()">
+    <div class="flex items-center gap-4 bg-white rounded-2xl px-6 py-5 border border-[#e5e7eb] cursor-pointer hover:border-[#7c3aed] hover:shadow-[0_4px_12px_rgba(124,58,237,0.08)] transition-all" (click)="abrirPreferencias()">
       <div class="w-12 h-12 bg-[#f5f3ff] rounded-[10px] flex items-center justify-center text-[#7c3aed] shrink-0">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="28" height="28"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
       </div>
@@ -157,6 +159,48 @@
       </div>
       <span class="text-xl text-[#9ca3af]">→</span>
     </div>
+
+    </div><!-- end left column -->
+
+    <!-- Right column: IQ Cuestionario -->
+    <div class="flex flex-col gap-4 flex-1 min-w-[300px] max-w-[420px]">
+
+      <div class="mb-2">
+        <h1 class="text-[1.8rem] font-extrabold text-[#111827]">Cuestionario IQ</h1>
+        <p class="text-sm text-[#6b7280] mt-1">Prueba de habilidad cognitiva</p>
+      </div>
+
+      <div class="bg-white rounded-2xl px-8 py-8 border-2 border-[#e5e7eb] flex flex-col gap-5">
+        <div class="flex flex-col gap-3">
+          <div class="flex items-center gap-3 bg-[#f5f3ff] border border-[#ede9fe] rounded-xl px-4 py-3">
+            <span class="text-lg">🔲</span>
+            <span class="text-sm font-medium text-[#111827] flex-1">Matrices Visuales</span>
+            <span class="bg-[#7c3aed] text-white text-xs font-bold rounded-full px-3 py-0.5">10</span>
+          </div>
+          <div class="flex items-center gap-3 bg-[#f5f3ff] border border-[#ede9fe] rounded-xl px-4 py-3">
+            <span class="text-lg">🔢</span>
+            <span class="text-sm font-medium text-[#111827] flex-1">Series</span>
+            <span class="bg-[#7c3aed] text-white text-xs font-bold rounded-full px-3 py-0.5">10</span>
+          </div>
+          <div class="flex items-center gap-3 bg-[#f5f3ff] border border-[#ede9fe] rounded-xl px-4 py-3">
+            <span class="text-lg">💬</span>
+            <span class="text-sm font-medium text-[#111827] flex-1">Razonamiento Verbal</span>
+            <span class="bg-[#7c3aed] text-white text-xs font-bold rounded-full px-3 py-0.5">10</span>
+          </div>
+        </div>
+        <p class="text-xs text-[#6b7280] text-center leading-relaxed">
+          30 preguntas · 3 categorías · Niveles fácil, medio y difícil
+        </p>
+        <button
+          class="w-full py-3.5 rounded-full text-base font-bold text-white bg-[#7c3aed] hover:bg-[#6d28d9] transition-colors border-none cursor-pointer font-sans"
+          (click)="irACuestionario()">
+          COMENZAR CUESTIONARIO
+        </button>
+      </div>
+
+    </div><!-- end right column -->
+
+    </div><!-- end flex row -->
 
   </main>
 

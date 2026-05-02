@@ -351,6 +351,10 @@ export class Dashboard implements OnInit, OnDestroy {
     }
   }
 
+  irACuestionario() {
+    this.router.navigate(['/iq']);
+  }
+
   abrirPreferencias() {
     this.mostrarPreferencias.set(true);
   }
