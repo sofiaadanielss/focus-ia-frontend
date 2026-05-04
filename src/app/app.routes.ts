@@ -4,13 +4,14 @@ import { Profile } from './pages/profile/profile';
 import { Dashboard } from './pages/dashboard/dashboard';
 import { AdhdQuestions } from './pages/adhd-questions/adhd-questions';
 import { IqComponent } from './pages/iq/iq';
+import { SessionHistory } from './pages/session-history/session-history';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
   { path: 'login', component: Login },
-  { path: 'register', component: Login },
-  { path: 'adhd-questions', component: AdhdQuestions },
   { path: 'profile', component: Profile },
   { path: 'dashboard', component: Dashboard },
-  { path: 'iq', component: IqComponent}
+  { path: 'adhd-questions', component: AdhdQuestions },
+  { path: 'iq', component: IqComponent},
+  { path: 'historico', component: SessionHistory },
 ];
