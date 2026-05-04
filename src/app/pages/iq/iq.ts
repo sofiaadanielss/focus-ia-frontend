@@ -220,6 +220,17 @@ export class IqComponent implements OnDestroy {
     return svg ? this.sanitizer.bypassSecurityTrustHtml(svg) : null;
   }
 
+  goBack(): void {
+    if (this.state() === 'quiz') {
+      this.state.set('intro');
+      this.currentIndex.set(0);
+      this.selectedOption.set(null);
+      this.answers.set([]);
+    } else {
+      this.router.navigate(['/dashboard']);
+    }
+  }
+
   startQuiz(): void {
     this.quizStartTime = Date.now();
     this.questionStartTime = Date.now();

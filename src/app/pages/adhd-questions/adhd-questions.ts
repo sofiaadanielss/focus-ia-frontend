@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
+import { FocusService } from '../../core/services/focus.service';
 
 interface Pregunta {
   id: number;
@@ -44,7 +45,7 @@ const PREGUNTAS_POR_PAGINA = 4;
   imports: [CommonModule],
   templateUrl: './adhd-questions.html',
 })
-export class Adhd implements OnInit {
+export class AdhdQuestions implements OnInit {
   readonly preguntas = PREGUNTAS;
   readonly totalPreguntas = PREGUNTAS.length;
   readonly preguntasPorPagina = PREGUNTAS_POR_PAGINA;
@@ -79,7 +80,11 @@ export class Adhd implements OnInit {
   /** Número de pregunta global para mostrar (primera de la página) */
   numeroPaginaDisplay = computed(() => this.paginaActual() + 1);
 
-  constructor(private router: Router, private http: HttpClient) {}
+  constructor(
+    private router: Router,
+    private http: HttpClient,
+    private focusSvc: FocusService
+  ) {}
 
   ngOnInit() {
     // Inicializar todas las respuestas en null
@@ -147,6 +152,19 @@ export class Adhd implements OnInit {
     };
   }
 
+  // ── Mapeo nivel TDAH → modo de enfoque ───────────────────────────────
+  /**
+   * Devuelve el modo de enfoque recomendado según el nivel de síntomas:
+   *  - Muy bajo / Bajo  → tranquilo   (concentración natural, sin bloqueos extra)
+   *  - Moderado          → alerta      (nivel intermedio, atención activa)
+   *  - Alto / Muy alto   → absoluta    (máxima ayuda para mantener el foco)
+   */
+  private nivelAModo(nivel: string): 'tranquilo' | 'alerta' | 'absoluta' {
+    if (nivel === 'Muy bajo' || nivel === 'Bajo') return 'tranquilo';
+    if (nivel === 'Moderado') return 'alerta';
+    return 'absoluta'; // Alto | Muy alto
+  }
+
   private enviarResultados() {
     this.enviando.set(true);
     this.errorServidor.set('');
@@ -163,14 +181,24 @@ export class Adhd implements OnInit {
       .post(`${environment.apiUrl}/tdah/resultados`, payload, { headers })
       .subscribe({
         next: () => {
+          // Guardar modo de enfoque recomendado según resultado del quiz
+          const modoRecomendado = this.nivelAModo(payload.nivel_interpretacion);
+          const duracion = this.focusSvc.getDuracionSesion();
+          this.focusSvc.guardarPreferenciasLocal({ mode: modoRecomendado, duration: duracion });
+          this.focusSvc.savePreferences(modoRecomendado, duracion).subscribe();
+
           // Marcar que el cuestionario TDAH ya fue completado
-          localStorage.setItem('adhd_questionnaire_completed', 'true');
+          localStorage.setItem('tdah_cuestionario_completado', 'true');
           this.enviando.set(false);
           this.completado.set(true);
         },
         error: (err) => {
-          // Aunque falle el backend, marcamos localmente para no bloquear al usuario
-          localStorage.setItem('adhd_questionnaire_completed', 'true');
+          // Aunque falle el backend, aplicamos el modo localmente para no bloquear al usuario
+          const modoRecomendado = this.nivelAModo(payload.nivel_interpretacion);
+          const duracion = this.focusSvc.getDuracionSesion();
+          this.focusSvc.guardarPreferenciasLocal({ mode: modoRecomendado, duration: duracion });
+
+          localStorage.setItem('tdah_cuestionario_completado', 'true');
           this.enviando.set(false);
           // Navegamos igual — el error se loguea pero no se bloquea
           console.warn('TDAH submit error (non-blocking):', err);
@@ -182,4 +210,19 @@ export class Adhd implements OnInit {
   irAlDashboard() {
     this.router.navigate(['/dashboard']);
   }
+
+  /** Modo recomendado calculado a partir de los resultados actuales */
+  modoRecomendado = computed(() => {
+    const resultados = this.calcularResultados();
+    return this.nivelAModo(resultados.nivel_interpretacion);
+  });
+
+  modoLabel = computed(() => {
+    const modos: Record<string, string> = {
+      tranquilo: '🧘 Tranquilo',
+      alerta: '⚡ Alerta',
+      absoluta: '🎯 Concentración absoluta',
+    };
+    return modos[this.modoRecomendado()] ?? this.modoRecomendado();
+  });
 }

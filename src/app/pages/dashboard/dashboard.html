@@ -5,10 +5,10 @@
   <main class="flex-1 px-[52px] py-10 overflow-y-auto mobile:px-6 mobile:pt-16">
     
     <!-- Contenedor padre alineado estrictamente a la izquierda -->
-    <div class="flex gap-8 items-start flex-wrap justify-start">
+    <div class="flex gap-8 items-start w-full">
       
       <!-- Columna Izquierda: Panel Principal -->
-      <div class="flex flex-col gap-4 w-[520px] max-w-full">
+      <div class="flex flex-col gap-4 w-1/2 min-w-0">
 
         <div class="mb-2">
           <h1 class="text-[1.8rem] font-extrabold text-[#111827]">Panel Principal</h1>
@@ -167,58 +167,58 @@
       </div><!-- fin columna izquierda -->
 
       <!-- Columna Derecha: IQ Cuestionario -->
-      <div class="flex flex-col gap-4 w-[420px] max-w-full">
+      <div class="flex flex-col gap-4 w-1/2 min-w-0">
 
         <div class="mb-2">
           <h1 class="text-[1.8rem] font-extrabold text-[#111827]">Cuestionario IQ</h1>
           <p class="text-sm text-[#6b7280] mt-1">Prueba de habilidad cognitiva</p>
         </div>
 
-        <div class="bg-white rounded-2xl px-8 py-8 border-2 border-[#e5e7eb] flex flex-col gap-5 w-full">
-          <div class="flex flex-col gap-3">
+        <div class="bg-white rounded-2xl px-10 py-10 border-2 border-[#e5e7eb] flex flex-col gap-7 w-full">
+          <div class="flex flex-col gap-4">
             
             <!-- Item 1: Matrices Visuales (Icono de cuadrícula) -->
-            <div class="flex items-center gap-3 bg-[#f5f3ff] border border-[#ede9fe] rounded-xl px-4 py-3">
-              <div class="flex items-center justify-center w-7 h-7">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-[#7c3aed]">
+            <div class="flex items-center gap-4 bg-[#f5f3ff] border border-[#ede9fe] rounded-xl px-6 py-5">
+              <div class="flex items-center justify-center w-10 h-10">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-7 h-7 text-[#7c3aed]">
                   <rect x="3" y="3" width="7" height="7" rx="1"></rect>
                   <rect x="14" y="3" width="7" height="7" rx="1"></rect>
                   <rect x="14" y="14" width="7" height="7" rx="1"></rect>
                   <rect x="3" y="14" width="7" height="7" rx="1"></rect>
                 </svg>
               </div>
-              <span class="text-sm font-medium text-[#111827] flex-1">Matrices Visuales</span>
-              <span class="bg-[#7c3aed] text-white text-xs font-bold rounded-full px-3 py-0.5">10</span>
+              <span class="text-base font-medium text-[#111827] flex-1">Matrices Visuales</span>
+              <span class="bg-[#7c3aed] text-white text-sm font-bold rounded-full px-4 py-1">10</span>
             </div>
 
             <!-- Item 2: Series (Icono de numeral/matemático) -->
-            <div class="flex items-center gap-3 bg-[#f5f3ff] border border-[#ede9fe] rounded-xl px-4 py-3">
-              <div class="flex items-center justify-center w-7 h-7">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-[#7c3aed]">
+            <div class="flex items-center gap-4 bg-[#f5f3ff] border border-[#ede9fe] rounded-xl px-6 py-5">
+              <div class="flex items-center justify-center w-10 h-10">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-7 h-7 text-[#7c3aed]">
                   <path d="M4 9h16M4 15h16M10 3L8 21M16 3l-2 18"></path>
                 </svg>
               </div>
-              <span class="text-sm font-medium text-[#111827] flex-1">Series</span>
-              <span class="bg-[#7c3aed] text-white text-xs font-bold rounded-full px-3 py-0.5">10</span>
+              <span class="text-base font-medium text-[#111827] flex-1">Series</span>
+              <span class="bg-[#7c3aed] text-white text-sm font-bold rounded-full px-4 py-1">10</span>
             </div>
 
             <!-- Item 3: Razonamiento Verbal (Icono de burbuja de chat) -->
-            <div class="flex items-center gap-3 bg-[#f5f3ff] border border-[#ede9fe] rounded-xl px-4 py-3">
-              <div class="flex items-center justify-center w-7 h-7">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-[#7c3aed]">
+            <div class="flex items-center gap-4 bg-[#f5f3ff] border border-[#ede9fe] rounded-xl px-6 py-5">
+              <div class="flex items-center justify-center w-10 h-10">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-7 h-7 text-[#7c3aed]">
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                 </svg>
               </div>
-              <span class="text-sm font-medium text-[#111827] flex-1">Razonamiento Verbal</span>
-              <span class="bg-[#7c3aed] text-white text-xs font-bold rounded-full px-3 py-0.5">10</span>
+              <span class="text-base font-medium text-[#111827] flex-1">Razonamiento Verbal</span>
+              <span class="bg-[#7c3aed] text-white text-sm font-bold rounded-full px-4 py-1">10</span>
             </div>
 
           </div>
-          <p class="text-xs text-[#6b7280] text-left leading-relaxed">
+          <p class="text-sm text-[#6b7280] text-left leading-relaxed">
             30 preguntas · 3 categorías · Niveles fácil, medio y difícil
           </p>
           <button
-            class="w-full py-3.5 rounded-full text-base font-bold text-white bg-[#7c3aed] hover:bg-[#6d28d9] transition-colors border-none cursor-pointer font-sans"
+            class="w-full py-4 rounded-full text-base font-bold text-white bg-[#7c3aed] hover:bg-[#6d28d9] transition-colors border-none cursor-pointer font-sans"
             (click)="irACuestionario()">
             COMENZAR CUESTIONARIO
           </button>
