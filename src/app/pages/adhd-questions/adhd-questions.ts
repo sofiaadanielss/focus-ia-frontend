@@ -240,9 +240,9 @@ export class AdhdQuestions implements OnInit {
 
   modoLabel = computed(() => {
     const modos: Record<string, string> = {
-      tranquilo: '🧘 Tranquilo',
-      alerta: '⚡ Alerta',
-      absoluta: '🎯 Concentración absoluta',
+      tranquilo: ' Tranquilo',
+      alerta: ' Alerta',
+      absoluta: ' Concentración absoluta',
     };
     return modos[this.modoRecomendado()] ?? this.modoRecomendado();
   });
