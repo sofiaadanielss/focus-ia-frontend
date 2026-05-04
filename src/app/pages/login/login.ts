@@ -192,7 +192,7 @@ export class Login {
         // Si nunca completó el cuestionario TDAH, redirigir ahí primero
         const tdahCompletado = localStorage.getItem('adhd_questionnaire_completed');
         if (!tdahCompletado) {
-          this.router.navigate(['/adhd']);
+          this.router.navigate(['/adhd-questions']);
         } else {
           this.router.navigate(['/dashboard']);
         }

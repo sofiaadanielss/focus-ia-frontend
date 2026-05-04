@@ -165,6 +165,27 @@ export class AdhdQuestions implements OnInit {
     return 'absoluta'; // Alto | Muy alto
   }
 
+  /**
+   * Duración de sesión recomendada según nivel de síntomas TDAH:
+   *  - Muy bajo / Bajo  → 50 min  (sin dificultades, sesiones estándar)
+   *  - Moderado          → 35 min  (sesión intermedia con descansos)
+   *  - Alto / Muy alto   → 25 min  (sesiones cortas para mantener el foco)
+   */
+  private nivelADuracion(nivel: string): number {
+    if (nivel === 'Muy bajo' || nivel === 'Bajo') return 50;
+    if (nivel === 'Moderado') return 35;
+    return 25; // Alto | Muy alto
+  }
+
+  /** Duración recomendada para mostrar en pantalla de resultado */
+  duracionRecomendada = computed(() => {
+    const resultados = this.calcularResultados();
+    return this.nivelADuracion(resultados.nivel_interpretacion);
+  });
+
+  /** Nivel de concentración calculado para mostrar en pantalla de resultado */
+  nivelResultado = computed(() => this.calcularResultados().nivel_interpretacion);
+
   private enviarResultados() {
     this.enviando.set(true);
     this.errorServidor.set('');
@@ -183,7 +204,7 @@ export class AdhdQuestions implements OnInit {
         next: () => {
           // Guardar modo de enfoque recomendado según resultado del quiz
           const modoRecomendado = this.nivelAModo(payload.nivel_interpretacion);
-          const duracion = this.focusSvc.getDuracionSesion();
+          const duracion = this.nivelADuracion(payload.nivel_interpretacion);
           this.focusSvc.guardarPreferenciasLocal({ mode: modoRecomendado, duration: duracion });
           this.focusSvc.savePreferences(modoRecomendado, duracion).subscribe();
 
@@ -195,7 +216,7 @@ export class AdhdQuestions implements OnInit {
         error: (err) => {
           // Aunque falle el backend, aplicamos el modo localmente para no bloquear al usuario
           const modoRecomendado = this.nivelAModo(payload.nivel_interpretacion);
-          const duracion = this.focusSvc.getDuracionSesion();
+          const duracion = this.nivelADuracion(payload.nivel_interpretacion);
           this.focusSvc.guardarPreferenciasLocal({ mode: modoRecomendado, duration: duracion });
 
           localStorage.setItem('tdah_cuestionario_completado', 'true');
