@@ -272,8 +272,16 @@ export class IqComponent implements OnDestroy {
       totalTimeMs: Date.now() - this.quizStartTime,
       completedAt: new Date().toISOString()
     }).subscribe({
-      next: () => this.state.set('done'),
-      error: () => this.state.set('done')
+      next: () => {
+        localStorage.setItem('iq_cuestionario_completado', 'true');
+        this.state.set('done');
+        this.router.navigate(['/dashboard']);
+      },
+      error: () => {
+        localStorage.setItem('iq_cuestionario_completado', 'true');
+        this.state.set('done');
+        this.router.navigate(['/dashboard']);
+      }
     });
   }
 

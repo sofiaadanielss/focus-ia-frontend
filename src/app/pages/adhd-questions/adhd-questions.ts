@@ -87,6 +87,12 @@ export class AdhdQuestions implements OnInit {
   ) {}
 
   ngOnInit() {
+    // If the questionnaire was already completed, skip straight to dashboard
+    if (localStorage.getItem('tdah_cuestionario_completado') === 'true') {
+      this.router.navigate(['/dashboard']);
+      return;
+    }
+
     // Inicializar todas las respuestas en null
     const mapa = new Map<number, Respuesta>();
     this.preguntas.forEach(p => mapa.set(p.id, null));
