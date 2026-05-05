@@ -2,26 +2,26 @@
   <div class="flex flex-col items-center justify-center min-h-screen bg-[#F3F4F6] px-4 py-8 font-sans">
 
     <!-- Logo + título -->
-    <div class="w-full max-w-4xl mb-6">
-      <div class="flex items-center gap-3 mb-5">
+    <div class="w-full max-w-2xl mb-6">
+      <div class="flex items-center gap-2 mb-5">
         <img src="assets/logo.png" class="w-10 h-10 object-contain" />
-        <span class="font-bold text-[#111827] text-xl tracking-wide">Focus AI</span>
+        <span class="font-bold text-[#111827] text-lg tracking-wide">Focus AI</span>
       </div>
 
-      <h1 class="font-display font-bold text-[#111827] text-4xl text-center">
+      <h1 class="font-display font-bold text-[#111827] text-3xl text-center">
         Para comenzar responde
       </h1>
     </div>
 
     <!-- Tarjeta de preguntas -->
-    <div class="w-full max-w-4xl bg-[#6d28d9] rounded-2xl p-9 shadow-lg relative">
+    <div class="w-full max-w-2xl bg-[#6d28d9] rounded-3xl p-9 shadow-lg relative">
 
       <!-- Lista de preguntas de la página actual -->
-      <div class="flex flex-col gap-6">
+      <div class="flex flex-col gap-7">
         @for (pregunta of preguntasPaginaActual(); track pregunta.id) {
           <div class="flex flex-col items-center gap-3">
             <!-- Texto de la pregunta -->
-            <p class="text-white font-semibold text-lg text-center leading-relaxed px-4">
+            <p class="text-white font-semibold text-lg text-center leading-relaxed px-2">
               {{ pregunta.texto }}
             </p>
 
