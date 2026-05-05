@@ -209,7 +209,7 @@ export class IqComponent implements OnDestroy {
     hard:   'Difícil'
   }[this.currentQuestion().difficulty]));
 
-  constructor(private iqService: IqService, private router: Router, private sanitizer: DomSanitizer) {}
+  constructor(private iqService: IqService, public router: Router, private sanitizer: DomSanitizer) {}
 
   ngOnDestroy(): void {}
 
@@ -275,12 +275,10 @@ export class IqComponent implements OnDestroy {
       next: () => {
         localStorage.setItem('iq_cuestionario_completado', 'true');
         this.state.set('done');
-        this.router.navigate(['/dashboard']);
       },
       error: () => {
         localStorage.setItem('iq_cuestionario_completado', 'true');
         this.state.set('done');
-        this.router.navigate(['/dashboard']);
       }
     });
   }
