@@ -9,12 +9,13 @@ import { DistractorDetectionService, DistractorAction, DistractorDetectionEvent 
 import { Sidebar } from '../../shared/sidebar/sidebar';
 import { Preferencias } from '../../features/preferencias/preferencias';
 import { SessionReportComponent, SessionReportData } from '../../shared/session-report/session-report';
+import { AuthService } from '../../core/auth/auth.service';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
   imports: [Sidebar, Preferencias, SessionReportComponent],
-  templateUrl: './dashboard.html'
+  templateUrl: './dashboard.html',
 })
 export class Dashboard implements OnInit, OnDestroy {
   @ViewChild('videoEl') videoRef!: ElementRef<HTMLVideoElement>;
@@ -50,7 +51,8 @@ export class Dashboard implements OnInit, OnDestroy {
     private distractionLog: DistractionLogService,
     private focusService: FocusService,
     public timerSvc: TimerService,
-    private distractorDetection: DistractorDetectionService
+    private distractorDetection: DistractorDetectionService,
+    private authService: AuthService
   ) {}
 
   get timerDisplay()     { return this.timerSvc.timerDisplay; }
@@ -82,6 +84,11 @@ export class Dashboard implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    if (!this.authService.isLoggedIn()){
+      window.location.href = '/login';
+      return;
+    }
+    
     this.cargarPreferencias();
 
     if (this.timerSvc.state.sesionActiva && !this.timerSvc.state.pausado) {

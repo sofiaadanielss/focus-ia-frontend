@@ -2,6 +2,7 @@ import { Component, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { CameraTrackingService } from '../../core/services/camera-tracking.service';
 import { TimerService } from '../../core/services/timer.service';
+import { AuthService } from '../../core/auth/auth.service';
 
 @Component({
   selector: 'app-sidebar',
@@ -18,7 +19,8 @@ export class Sidebar {
   constructor(
     private router: Router,
     private cameraTracking: CameraTrackingService,
-    public timerSvc: TimerService
+    public timerSvc: TimerService,
+    private authService: AuthService
   ) {}
 
   isActive(route: string): boolean {
@@ -42,5 +44,7 @@ export class Sidebar {
     this.cameraTracking.detener();
     this.timerSvc.limpiarInterval();
     this.router.navigate(['/login']);
+    this.authService.logout();
+    this.timerSvc.resetear();
   }
 }
