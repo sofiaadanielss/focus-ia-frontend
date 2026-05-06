@@ -14,7 +14,6 @@ interface Pregunta {
 type Respuesta = 'de_acuerdo' | 'en_desacuerdo' | null;
 
 const PREGUNTAS: Pregunta[] = [
-  // Dimensión 1 – Inatención (1–9)
   { id: 1,  texto: 'Puedo poner en orden mis cosas fácilmente cuando una tarea requiere organización.', dimension: 'inatencion' },
   { id: 2,  texto: 'Presto atención a los detalles y evito cometer errores por descuido en mi trabajo o actividades.', dimension: 'inatencion' },
   { id: 3,  texto: 'Me resulta fácil mantener la atención en tareas largas o actividades recreativas.', dimension: 'inatencion' },
@@ -24,7 +23,6 @@ const PREGUNTAS: Pregunta[] = [
   { id: 7,  texto: 'Raramente pierdo objetos necesarios para mis actividades (llaves, teléfono, billetera, documentos).', dimension: 'inatencion' },
   { id: 8,  texto: 'Me concentro con facilidad y no me distraigo ante estímulos externos mientras trabajo.', dimension: 'inatencion' },
   { id: 9,  texto: 'Recuerdo fácilmente mis citas, obligaciones y actividades cotidianas.', dimension: 'inatencion' },
-  // Dimensión 2 – Hiperactividad e Impulsividad (10–18)
   { id: 10, texto: 'Puedo estar sentado tranquilamente durante largos periodos sin sentir inquietud en manos o pies.', dimension: 'hiperactividad' },
   { id: 11, texto: 'Raramente me levanto de mi lugar cuando se espera que permanezca sentado (reuniones, clases, etc.).', dimension: 'hiperactividad' },
   { id: 12, texto: 'No experimento una sensación de inquietud o necesidad de estar en movimiento constante.', dimension: 'hiperactividad' },
@@ -36,7 +34,6 @@ const PREGUNTAS: Pregunta[] = [
   { id: 18, texto: 'Evito interrumpir o entrometerme en lo que hacen o dicen otras personas.', dimension: 'hiperactividad' },
 ];
 
-// Cuántas preguntas mostrar por "página"
 const PREGUNTAS_POR_PAGINA = 4;
 
 @Component({
@@ -50,18 +47,12 @@ export class AdhdQuestions implements OnInit {
   readonly totalPreguntas = PREGUNTAS.length;
   readonly preguntasPorPagina = PREGUNTAS_POR_PAGINA;
 
-  // Página actual (0-indexed)
   paginaActual = signal(0);
-
-  // Map de respuestas: id → 'de_acuerdo' | 'en_desacuerdo'
   respuestas = signal<Map<number, Respuesta>>(new Map());
-
-  // Estados de UI
   enviando = signal(false);
   errorServidor = signal('');
   completado = signal(false);
 
-  // ── Computed ──────────────────────────────────────────────────────────
   totalPaginas = computed(() =>
     Math.ceil(this.totalPreguntas / this.preguntasPorPagina)
   );
@@ -71,13 +62,11 @@ export class AdhdQuestions implements OnInit {
     return this.preguntas.slice(inicio, inicio + this.preguntasPorPagina);
   });
 
-  /** ¿Todas las preguntas de la página actual tienen respuesta? */
   paginaCompleta = computed(() => {
     const resp = this.respuestas();
     return this.preguntasPaginaActual().every(p => resp.get(p.id) !== null && resp.get(p.id) !== undefined);
   });
 
-  /** Número de pregunta global para mostrar (primera de la página) */
   numeroPaginaDisplay = computed(() => this.paginaActual() + 1);
 
   constructor(
@@ -86,14 +75,24 @@ export class AdhdQuestions implements OnInit {
     private focusSvc: FocusService
   ) {}
 
+  // Returns a user-scoped localStorage key so different users on the
+  // same browser each get their own quiz completion flag.
+  private getQuizKey(): string {
+    try {
+      const token = localStorage.getItem('access_token');
+      const userId = token ? JSON.parse(atob(token.split('.')[1]))?.sub : null;
+      return userId ? `tdah_cuestionario_completado_${userId}` : 'tdah_cuestionario_completado';
+    } catch {
+      return 'tdah_cuestionario_completado';
+    }
+  }
+
   ngOnInit() {
-    // If the questionnaire was already completed, skip straight to dashboard
-    if (localStorage.getItem('tdah_cuestionario_completado') === 'true') {
+    if (localStorage.getItem(this.getQuizKey()) === 'true') {
       this.router.navigate(['/dashboard']);
       return;
     }
 
-    // Inicializar todas las respuestas en null
     const mapa = new Map<number, Respuesta>();
     this.preguntas.forEach(p => mapa.set(p.id, null));
     this.respuestas.set(mapa);
@@ -123,11 +122,9 @@ export class AdhdQuestions implements OnInit {
 
   esUltimaPagina = computed(() => this.paginaActual() === this.totalPaginas() - 1);
 
-  // ── Lógica de puntuación ──────────────────────────────────────────────
   private calcularResultados() {
     const resp = this.respuestas();
 
-    // 1 punto por cada "en_desacuerdo" (indicador de TDAH)
     let puntajeInatencion = 0;
     let puntajeHiperactividad = 0;
 
@@ -158,38 +155,23 @@ export class AdhdQuestions implements OnInit {
     };
   }
 
-  // ── Mapeo nivel TDAH → modo de enfoque ───────────────────────────────
-  /**
-   * Devuelve el modo de enfoque recomendado según el nivel de síntomas:
-   *  - Muy bajo / Bajo  → tranquilo   (concentración natural, sin bloqueos extra)
-   *  - Moderado          → alerta      (nivel intermedio, atención activa)
-   *  - Alto / Muy alto   → absoluta    (máxima ayuda para mantener el foco)
-   */
   private nivelAModo(nivel: string): 'tranquilo' | 'alerta' | 'absoluta' {
     if (nivel === 'Muy bajo' || nivel === 'Bajo') return 'tranquilo';
     if (nivel === 'Moderado') return 'alerta';
-    return 'absoluta'; // Alto | Muy alto
+    return 'absoluta';
   }
 
-  /**
-   * Duración de sesión recomendada según nivel de síntomas TDAH:
-   *  - Muy bajo / Bajo  → 50 min  (sin dificultades, sesiones estándar)
-   *  - Moderado          → 35 min  (sesión intermedia con descansos)
-   *  - Alto / Muy alto   → 25 min  (sesiones cortas para mantener el foco)
-   */
   private nivelADuracion(nivel: string): number {
     if (nivel === 'Muy bajo' || nivel === 'Bajo') return 50;
     if (nivel === 'Moderado') return 35;
-    return 25; // Alto | Muy alto
+    return 25;
   }
 
-  /** Duración recomendada para mostrar en pantalla de resultado */
   duracionRecomendada = computed(() => {
     const resultados = this.calcularResultados();
     return this.nivelADuracion(resultados.nivel_interpretacion);
   });
 
-  /** Nivel de concentración calculado para mostrar en pantalla de resultado */
   nivelResultado = computed(() => this.calcularResultados().nivel_interpretacion);
 
   private enviarResultados() {
@@ -208,26 +190,22 @@ export class AdhdQuestions implements OnInit {
       .post(`${environment.apiUrl}/tdah/resultados`, payload, { headers })
       .subscribe({
         next: () => {
-          // Guardar modo de enfoque recomendado según resultado del quiz
           const modoRecomendado = this.nivelAModo(payload.nivel_interpretacion);
           const duracion = this.nivelADuracion(payload.nivel_interpretacion);
           this.focusSvc.guardarPreferenciasLocal({ mode: modoRecomendado, duration: duracion });
           this.focusSvc.savePreferences(modoRecomendado, duracion).subscribe();
 
-          // Marcar que el cuestionario TDAH ya fue completado
-          localStorage.setItem('tdah_cuestionario_completado', 'true');
+          localStorage.setItem(this.getQuizKey(), 'true');
           this.enviando.set(false);
           this.completado.set(true);
         },
         error: (err) => {
-          // Aunque falle el backend, aplicamos el modo localmente para no bloquear al usuario
           const modoRecomendado = this.nivelAModo(payload.nivel_interpretacion);
           const duracion = this.nivelADuracion(payload.nivel_interpretacion);
           this.focusSvc.guardarPreferenciasLocal({ mode: modoRecomendado, duration: duracion });
 
-          localStorage.setItem('tdah_cuestionario_completado', 'true');
+          localStorage.setItem(this.getQuizKey(), 'true');
           this.enviando.set(false);
-          // Navegamos igual — el error se loguea pero no se bloquea
           console.warn('TDAH submit error (non-blocking):', err);
           this.completado.set(true);
         },
@@ -238,7 +216,6 @@ export class AdhdQuestions implements OnInit {
     this.router.navigate(['/dashboard']);
   }
 
-  /** Modo recomendado calculado a partir de los resultados actuales */
   modoRecomendado = computed(() => {
     const resultados = this.calcularResultados();
     return this.nivelAModo(resultados.nivel_interpretacion);

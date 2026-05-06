@@ -189,8 +189,7 @@ export class Login {
       next: () => {
         this.resetFailedAttempts();
         this.successMessage.set('Inicio de sesión exitoso');
-        // Si nunca completó el cuestionario TDAH, redirigir ahí primero
-        const tdahCompletado = localStorage.getItem('adhd_questionnaire_completed');
+        const tdahCompletado = localStorage.getItem('tdah_cuestionario_completado');
         if (!tdahCompletado) {
           this.router.navigate(['/adhd-questions']);
         } else {
@@ -231,7 +230,7 @@ export class Login {
     }).subscribe({
       next: () => {
         // Limpiar flag del cuestionario para el nuevo usuario
-        localStorage.removeItem('adhd_questionnaire_completed');
+        localStorage.removeItem('tdah_cuestionario_completado');
         this.showModal.set(true);
       },
       error: (err) => {
