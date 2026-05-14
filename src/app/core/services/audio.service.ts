@@ -7,11 +7,10 @@ export class AudioService {
   private audioCache: Map<string, HTMLAudioElement> = new Map();
 
   private readonly SOUND_MAP: Record<string, string> = {
-    moderado:  'assets/audio/mixkit-bell-notification-993.wav',
-    absoluta:  'assets/audio/999-social-credit-siren.mp3',
+    moderado: 'assets/audio/mixkit-bell-notification-933.mp3',
+    absoluta: 'assets/audio/999-social-credit-siren.mp3',
   };
 
-  /** Pre-load a sound so first play is instant */
   preload(mode: FocusMode): void {
     const src = this.SOUND_MAP[mode];
     if (!src || this.audioCache.has(mode)) return;
@@ -20,33 +19,41 @@ export class AudioService {
     this.audioCache.set(mode, audio);
   }
 
-  /** Play the sound for the given focus mode (no-op for 'tranquilo') */
+  /** One-shot play (resets from start) */
   play(mode: FocusMode): void {
-    const src = this.SOUND_MAP[mode];
-    if (!src) return; // tranquilo → sin sonido
-
-    let audio = this.audioCache.get(mode);
-    if (!audio) {
-      audio = new Audio(src);
-      this.audioCache.set(mode, audio);
-    }
-
-    // Restart from beginning if already playing
+    const audio = this.getOrCreate(mode);
+    if (!audio) return;
+    audio.loop = false;
     audio.currentTime = 0;
-    audio.play().catch(() => {
-      // Autoplay blocked by browser policy — silently ignore
-    });
+    audio.play().catch(() => {});
+  }
+
+  /** Looping play — keeps repeating until stop() is called */
+  playLoop(mode: FocusMode): void {
+    const audio = this.getOrCreate(mode);
+    if (!audio) return;
+    if (!audio.paused) return; // already playing
+    audio.loop = true;
+    audio.currentTime = 0;
+    audio.play().catch(() => {});
   }
 
   stop(mode: FocusMode): void {
     const audio = this.audioCache.get(mode);
-    if (audio) {
-      audio.pause();
-      audio.currentTime = 0;
-    }
+    if (!audio) return;
+    audio.loop = false;
+    audio.pause();
+    audio.currentTime = 0;
   }
 
-  /** Get mode key from the stored preference string */
+  stopAll(): void {
+    this.audioCache.forEach(audio => {
+      audio.loop = false;
+      audio.pause();
+      audio.currentTime = 0;
+    });
+  }
+
   modeFromPreference(prefMode: string): FocusMode {
     const map: Record<string, FocusMode> = {
       tranquilo: 'tranquilo',
@@ -54,5 +61,16 @@ export class AudioService {
       absoluta:  'absoluta',
     };
     return map[prefMode] ?? 'tranquilo';
+  }
+
+  private getOrCreate(mode: FocusMode): HTMLAudioElement | null {
+    const src = this.SOUND_MAP[mode];
+    if (!src) return null; // tranquilo → sin sonido
+    let audio = this.audioCache.get(mode);
+    if (!audio) {
+      audio = new Audio(src);
+      this.audioCache.set(mode, audio);
+    }
+    return audio;
   }
 }

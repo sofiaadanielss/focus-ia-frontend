@@ -7,6 +7,7 @@ import { FocusService } from '../../core/services/focus.service';
 import { TimerService } from '../../core/services/timer.service';
 import { DistractorDetectionService, DistractorAction, DistractorDetectionEvent } from '../../core/services/distractor-detection.service';
 import { SessionApiService, DetectionOut } from '../../core/services/session-api.service';
+import { AudioService, FocusMode } from '../../core/services/audio.service';
 import { Sidebar } from '../../shared/sidebar/sidebar';
 import { Preferencias } from '../../features/preferencias/preferencias';
 import { SessionReportComponent, SessionReportData } from '../../shared/session-report/session-report';
@@ -44,6 +45,10 @@ export class Dashboard implements OnInit, OnDestroy {
   private statusSub!: Subscription;
   private distractorSub!: Subscription;
 
+  // Tipos de alerta de cámara activos en este momento (para gestionar audio en loop)
+  private activeAlertTypes = new Set<string>();
+  private currentAudioMode: FocusMode = 'tranquilo';
+
   constructor(
     private router: Router,
     private cdr: ChangeDetectorRef,
@@ -52,7 +57,8 @@ export class Dashboard implements OnInit, OnDestroy {
     private focusService: FocusService,
     public timerSvc: TimerService,
     private distractorDetection: DistractorDetectionService,
-    private sessionApi: SessionApiService
+    private sessionApi: SessionApiService,
+    private audioService: AudioService
   ) {}
 
   get timerDisplay()     { return this.timerSvc.timerDisplay; }
@@ -148,6 +154,10 @@ export class Dashboard implements OnInit, OnDestroy {
       tiempoTotal: duracion * 60,
       tiempoRestante: duracion * 60
     });
+
+    // Actualizar modo de audio y precargar el archivo
+    this.currentAudioMode = this.audioService.modeFromPreference(prefs?.mode ?? 'tranquilo');
+    this.audioService.preload(this.currentAudioMode);
   }
 
   async startSession() {
@@ -307,6 +317,8 @@ export class Dashboard implements OnInit, OnDestroy {
 
     this.loading = false;
     this.toasts = [];
+    this.audioService.stopAll();
+    this.activeAlertTypes.clear();
 
     // H10 — mostrar reporte automáticamente al finalizar sesión
     this.reporteSesion = sesion;
@@ -322,6 +334,8 @@ export class Dashboard implements OnInit, OnDestroy {
   nuevaSesion() {
     this.cameraTracking.detener();
     this.distractorDetection.detenerMonitoreo();
+    this.audioService.stopAll();
+    this.activeAlertTypes.clear();
     this.timerSvc.resetear();
     this.cameraStatus = 'idle';
     this.cameraPermisoDenegado = false;
@@ -362,11 +376,21 @@ export class Dashboard implements OnInit, OnDestroy {
   }
 
   cerrarToast(index: number) {
-    if (this.toasts[index]) {
-      if (this.toasts[index].autoCloseTimer) clearTimeout(this.toasts[index].autoCloseTimer);
-      this.toasts.splice(index, 1);
-      this.cdr.detectChanges();
+    if (!this.toasts[index]) return;
+    const tipo = this.toasts[index].tipo;
+    if (this.toasts[index].autoCloseTimer) clearTimeout(this.toasts[index].autoCloseTimer);
+    this.toasts.splice(index, 1);
+
+    // Alerta de cámara cerrada manualmente → el usuario quiere silenciar, parar audio
+    const isCameraAlert = tipo === 'fuera_de_encuadre' || tipo === 'desvio_mirada';
+    if (isCameraAlert) {
+      this.activeAlertTypes.delete(tipo);
+      if (this.activeAlertTypes.size === 0) {
+        this.audioService.stop(this.currentAudioMode);
+      }
     }
+
+    this.cdr.detectChanges();
   }
 
   abrirPreferencias() {
@@ -413,15 +437,33 @@ export class Dashboard implements OnInit, OnDestroy {
 
   private manejarToast(event: ToastEvent): void {
     if (event.visible) {
+      // Evitar duplicados en la UI
       const existente = this.toasts.findIndex(t => t.tipo === event.tipo);
       if (existente >= 0) return;
+
+      // Arrancar audio en loop al aparecer la primera alerta de cámara
+      if (!this.activeAlertTypes.has(event.tipo)) {
+        this.activeAlertTypes.add(event.tipo);
+        if (this.activeAlertTypes.size === 1) {
+          this.audioService.playLoop(this.currentAudioMode);
+        }
+      }
+
       const toast = { tipo: event.tipo, mensaje: event.mensaje, visible: true, autoCloseTimer: null as any };
+      // Auto-close visual a los 6s — pero NO detiene el audio (la distracción continúa)
       toast.autoCloseTimer = setTimeout(() => {
         const idx = this.toasts.indexOf(toast);
         if (idx >= 0) { this.toasts.splice(idx, 1); this.cdr.detectChanges(); }
       }, 6000);
       this.toasts.push(toast);
+
     } else {
+      // El sistema de cámara confirma que el usuario volvió a prestar atención
+      this.activeAlertTypes.delete(event.tipo);
+      if (this.activeAlertTypes.size === 0) {
+        this.audioService.stop(this.currentAudioMode);
+      }
+
       const idx = this.toasts.findIndex(t => t.tipo === event.tipo);
       if (idx >= 0) {
         if (this.toasts[idx].autoCloseTimer) clearTimeout(this.toasts[idx].autoCloseTimer);

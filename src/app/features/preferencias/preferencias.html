@@ -1,76 +1,127 @@
-<div class="fixed inset-0 bg-black/40 flex items-center justify-center z-50" (click)="cerrar.emit()">
-  <div class="bg-white rounded-2xl p-10 w-[90%] max-w-[600px] relative animate-[scaleIn_0.3s_ease]" (click)="$event.stopPropagation()">
+<div class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-[fadeIn_0.2s_ease]"
+     (click)="cerrar.emit()">
+  <div class="bg-white rounded-2xl p-9 w-[92%] max-w-[560px] relative shadow-2xl animate-[scaleIn_0.25s_ease]"
+       (click)="$event.stopPropagation()">
 
-    <button class="absolute top-5 right-5 text-[#9ca3af] hover:text-[#111827] transition-colors bg-transparent border-none cursor-pointer" (click)="cerrar.emit()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    <!-- Botón cerrar -->
+    <button class="absolute top-4 right-4 w-9 h-9 flex items-center justify-center rounded-xl
+                   text-[#9CA3AF] hover:text-[#374151] hover:bg-[#F3F4F6]
+                   transition-all bg-transparent border-none cursor-pointer"
+            (click)="cerrar.emit()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18">
+        <line x1="18" y1="6" x2="6" y2="18"/>
+        <line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
     </button>
 
-    <h2 class="font-sans font-bold text-[#312e81] text-2xl mb-8 text-center">Preferencias</h2>
+    <h2 class="font-sans font-bold text-[#111827] text-xl mb-7 text-center tracking-tight">
+      Preferencias de sesión
+    </h2>
 
+    <!-- Modo de concentración -->
     <div class="mb-8">
-      <p class="text-sm font-semibold text-[#312e81] mb-4">Nivel de concentración</p>
-      <div class="flex gap-3 flex-wrap justify-center">
+      <p class="text-xs font-bold text-[#374151] uppercase tracking-widest mb-4">
+        Nivel de concentración
+      </p>
+      <div class="flex gap-2.5 flex-wrap">
         <button
           (click)="seleccionarModo('absoluta')"
-          class="px-6 py-3 rounded-full text-sm font-semibold border-none cursor-pointer transition-all"
+          class="flex-1 min-w-[140px] px-5 py-3.5 rounded-xl text-sm font-semibold border-2
+                 cursor-pointer transition-all duration-150 active:scale-[0.97]"
           [class]="preferencias().modo === 'absoluta'
-            ? 'bg-[#7c3aed] text-white shadow-[0_4px_12px_rgba(124,58,237,0.35)] scale-105'
-            : 'bg-[#ede9fe] text-[#6d28d9] hover:bg-[#ddd6fe]'">
-          Concentración absoluta
+            ? 'bg-[#7C3AED] border-[#7C3AED] text-white shadow-[0_4px_14px_rgba(124,58,237,0.3)]'
+            : 'bg-white border-[#E5E7EB] text-[#374151] hover:border-[#C4B5FD] hover:bg-[#F5F3FF]'">
+          <span class="block text-center">
+            <span class="block text-base mb-0.5">🔒</span>
+            Absoluta
+          </span>
         </button>
         <button
           (click)="seleccionarModo('moderado')"
-          class="px-6 py-3 rounded-full text-sm font-semibold border-none cursor-pointer transition-all"
+          class="flex-1 min-w-[140px] px-5 py-3.5 rounded-xl text-sm font-semibold border-2
+                 cursor-pointer transition-all duration-150 active:scale-[0.97]"
           [class]="preferencias().modo === 'moderado'
-            ? 'bg-[#7c3aed] text-white shadow-[0_4px_12px_rgba(124,58,237,0.35)] scale-105'
-            : 'bg-[#ede9fe] text-[#6d28d9] hover:bg-[#ddd6fe]'">
-          Moderado
+            ? 'bg-[#7C3AED] border-[#7C3AED] text-white shadow-[0_4px_14px_rgba(124,58,237,0.3)]'
+            : 'bg-white border-[#E5E7EB] text-[#374151] hover:border-[#C4B5FD] hover:bg-[#F5F3FF]'">
+          <span class="block text-center">
+            <span class="block text-base mb-0.5">⚖️</span>
+            Moderado
+          </span>
         </button>
         <button
           (click)="seleccionarModo('tranquilo')"
-          class="px-6 py-3 rounded-full text-sm font-semibold border-none cursor-pointer transition-all"
+          class="flex-1 min-w-[140px] px-5 py-3.5 rounded-xl text-sm font-semibold border-2
+                 cursor-pointer transition-all duration-150 active:scale-[0.97]"
           [class]="preferencias().modo === 'tranquilo'
-            ? 'bg-[#7c3aed] text-white shadow-[0_4px_12px_rgba(124,58,237,0.35)] scale-105'
-            : 'bg-[#ede9fe] text-[#6d28d9] hover:bg-[#ddd6fe]'">
-          Tranquilo
+            ? 'bg-[#7C3AED] border-[#7C3AED] text-white shadow-[0_4px_14px_rgba(124,58,237,0.3)]'
+            : 'bg-white border-[#E5E7EB] text-[#374151] hover:border-[#C4B5FD] hover:bg-[#F5F3FF]'">
+          <span class="block text-center">
+            <span class="block text-base mb-0.5">🌿</span>
+            Tranquilo
+          </span>
         </button>
       </div>
     </div>
 
+    <!-- Duración de sesión -->
     <div class="mb-8">
-      <p class="text-sm font-semibold text-[#312e81] mb-4">Duración de la sesión</p>
-      <div class="px-4">
+      <div class="flex items-center justify-between mb-4">
+        <p class="text-xs font-bold text-[#374151] uppercase tracking-widest">
+          Duración de la sesión
+        </p>
+        <span class="text-[#7C3AED] text-xl font-extrabold tabular-nums">
+          {{ preferencias().duracion }} min
+        </span>
+      </div>
+      <div class="px-1">
         <input
           type="range"
           min="15"
           max="120"
           [ngModel]="preferencias().duracion"
           (ngModelChange)="actualizarDuracion($event)"
-          class="w-full accent-[#7c3aed] cursor-pointer"
+          class="w-full accent-[#7C3AED] cursor-pointer h-2"
         />
-        <div class="flex justify-between mt-2 text-xs text-[#6b7280]">
+        <div class="flex justify-between mt-2 text-xs text-[#9CA3AF]">
           <span>15 min</span>
-          <span class="text-[#7c3aed] text-sm font-extrabold">{{ preferencias().duracion }} min</span>
           <span>120 min</span>
         </div>
       </div>
     </div>
 
-    <div class="text-center">
-      <button
-        (click)="guardar()"
-        [disabled]="botonBloqueado()"
-        class="bg-[#1e1b4b] hover:bg-[#312e81] text-white px-10 py-3.5 rounded-xl text-sm font-bold border-none cursor-pointer transition-colors disabled:bg-[#9ca3af] disabled:cursor-not-allowed">
+    <!-- Acción -->
+    <button
+      (click)="guardar()"
+      [disabled]="botonBloqueado()"
+      class="w-full bg-[#7C3AED] hover:bg-[#6D28D9] active:scale-[0.98] text-white
+             py-3.5 rounded-full text-sm font-bold border-none cursor-pointer
+             transition-all duration-150
+             disabled:bg-[#C4B5FD] disabled:cursor-not-allowed disabled:active:scale-100
+             flex items-center justify-center gap-2">
+      @if (botonBloqueado()) {
+        <span class="spinner-sm border-white/30 border-t-white"></span>
+        Guardando…
+      } @else {
         Guardar Preferencias
-      </button>
+      }
+    </button>
 
-      @if (mostrarCompletado()) {
-        <p class="mt-4 text-sm font-semibold text-[#059669]">Preferencias guardadas correctamente</p>
-      }
-      @if (mostrarSesionActiva()) {
-        <p class="mt-4 text-sm font-semibold text-[#7c3aed] bg-[#f5f3ff] border border-[#ddd6fe] rounded-xl px-4 py-2.5">Guardado — Sesión en curso no interrumpida</p>
-      }
-    </div>
+    @if (mostrarCompletado()) {
+      <div class="success-banner mt-4 animate-[slideUp_0.2s_ease]">
+        <span class="flex items-center justify-center gap-1.5">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="13" height="13">
+            <path d="M20 6L9 17l-5-5"/>
+          </svg>
+          Preferencias guardadas correctamente
+        </span>
+      </div>
+    }
+    @if (mostrarSesionActiva()) {
+      <p class="mt-4 text-sm font-semibold text-[#7C3AED] bg-[#F5F3FF] border border-[#DDD6FE]
+                rounded-xl px-4 py-2.5 text-center">
+        Guardado — la sesión en curso no fue interrumpida
+      </p>
+    }
 
   </div>
 </div>
