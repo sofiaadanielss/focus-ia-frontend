@@ -16,7 +16,7 @@
   <div class="flex items-center justify-between mb-10 pl-1">
     <div class="flex items-center gap-3">
       <img src="/assets/logo.png" class="w-8 h-auto invert" />
-      <span class="text-white font-sans font-extrabold text-lg tracking-wide">Focus AI</span>
+      <span class="text-white font-display font-extrabold text-lg tracking-wide">Focus AI</span>
     </div>
     <button class="hidden mobile:flex w-8 h-8 items-center justify-center text-white/60 hover:text-white bg-transparent border-none cursor-pointer rounded-lg hover:bg-white/10 transition-colors"
             (click)="closeMenu()">
@@ -38,10 +38,28 @@
       Perfil
     </a>
     <a class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm no-underline transition-colors"
-       [class]="isActive('/historico') ? 'font-semibold text-white bg-white/15' : 'font-medium text-white/70 hover:bg-white/10 hover:text-white'"
-       (click)="navigate('/historico')">
-      <svg class="w-[18px] h-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
-      Historial
+       [class]="isActive('/distractors') ? 'font-semibold text-white bg-white/15' : 'font-medium text-white/70 hover:bg-white/10 hover:text-white'"
+       (click)="navigate('/distractors')">
+      <svg class="w-[18px] h-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+      Distractores
+    </a>
+    <a class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm no-underline transition-colors"
+       [class]="isActive('/history') ? 'font-semibold text-white bg-white/15' : 'font-medium text-white/70 hover:bg-white/10 hover:text-white'"
+       (click)="navigate('/history')">
+      <svg class="w-[18px] h-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Histórico
+    </a>
+    <a class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm no-underline transition-colors"
+       [class]="isActive('/adhd-questions') ? 'font-semibold text-white bg-white/15' : 'font-medium text-white/70 hover:bg-white/10 hover:text-white'"
+       (click)="navigate('/adhd-questions')">
+      <svg class="w-[18px] h-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11.5a2.5 2.5 0 1 1 5 0c0 1.5-2.5 2-2.5 4"/><circle cx="11.5" cy="18" r="0.5" fill="currentColor"/><circle cx="12" cy="12" r="10"/></svg>
+      Test TDAH
+    </a>
+    <a class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm no-underline transition-colors"
+       [class]="isActive('/iq') ? 'font-semibold text-white bg-white/15' : 'font-medium text-white/70 hover:bg-white/10 hover:text-white'"
+       (click)="navigate('/iq')">
+      <svg class="w-[18px] h-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Test IQ
     </a>
   </nav>
 

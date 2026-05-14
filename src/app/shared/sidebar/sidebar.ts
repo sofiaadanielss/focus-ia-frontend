@@ -19,8 +19,8 @@ export class Sidebar {
   constructor(
     private router: Router,
     private cameraTracking: CameraTrackingService,
-    public timerSvc: TimerService,
-    private authService: AuthService
+    private authService: AuthService,
+    public timerSvc: TimerService
   ) {}
 
   isActive(route: string): boolean {
@@ -42,9 +42,8 @@ export class Sidebar {
 
   logout() {
     this.cameraTracking.detener();
-    this.timerSvc.limpiarInterval();
-    this.router.navigate(['/login']);
+    this.timerSvc.limpiarParaLogout();
     this.authService.logout();
-    this.timerSvc.resetear();
+    this.router.navigate(['/login']);
   }
 }
