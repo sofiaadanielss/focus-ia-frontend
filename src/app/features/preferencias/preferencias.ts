@@ -2,6 +2,7 @@ import { Component, signal, computed, inject, OnInit, Output, EventEmitter } fro
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FocusService } from '../../core/services/focus.service';
+import { DistractorDetectionService, RestrictionLevel } from '../../core/services/distractor-detection.service';
 
 @Component({
   selector: 'app-preferencias',
@@ -15,6 +16,14 @@ export class Preferencias implements OnInit {
   @Output() guardado = new EventEmitter<void>();
 
   private focusSvc = inject(FocusService);
+  private distractorSvc = inject(DistractorDetectionService);
+
+  /** Map from preference mode key → restriction level */
+  private readonly MODO_NIVEL: Record<string, RestrictionLevel> = {
+    tranquilo: 'bajo',
+    moderado:  'intermedio',
+    absoluta:  'alto',
+  };
 
   preferencias = signal({ modo: '', duracion: 45 });
   mostrarCompletado = signal(false);
@@ -59,6 +68,9 @@ export class Preferencias implements OnInit {
 
     try {
       this.focusSvc.guardarPreferenciasLocal(prefs);
+      // Sync restriction level with the chosen focus mode
+      const nivel = this.MODO_NIVEL[prefs.mode] ?? 'bajo';
+      this.distractorSvc.setNivelRestriccion(nivel);
       await this.focusSvc.savePreferences(prefs.mode, prefs.duration).toPromise();
 
       if (this.haySesionActiva()) {

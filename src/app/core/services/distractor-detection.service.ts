@@ -1,5 +1,6 @@
-import { Injectable, OnDestroy } from '@angular/core';
+import { Injectable, OnDestroy, inject } from '@angular/core';
 import { Subject } from 'rxjs';
+import { DistractorService } from './distractor.service';
 
 export type RestrictionLevel = 'bajo' | 'intermedio' | 'alto';
 export type DistractorCategory = 'red_social' | 'videojuego' | 'streaming' | 'otro';
@@ -28,8 +29,12 @@ export type DistractorAction = 'silencio' | 'toast' | 'bloqueo';
 })
 export class DistractorDetectionService implements OnDestroy {
 
+  private readonly api = inject(DistractorService);
+
   // ─── Base de datos de distractores ───────────────────────────────────────
-  private readonly DB: DistractorEntry[] = [
+  // Esta DB se inicializa con globales hardcodeados y se puede extender
+  // dinámicamente con distractores del backend (globales + personales)
+  private DB: DistractorEntry[] = [
     // Redes sociales
     { nombre: 'Facebook',   url: 'facebook.com',   categoria: 'red_social',  origen: 'global' },
     { nombre: 'Instagram',  url: 'instagram.com',  categoria: 'red_social',  origen: 'global' },
@@ -106,6 +111,94 @@ export class DistractorDetectionService implements OnDestroy {
 
   limpiarRegistros(): void {
     this.registros = [];
+  }
+
+  /**
+   * Carga distractores desde el backend y los fusiona con la DB local.
+   * Se llama al inicio de sesión o cuando se modifica la lista de distractores.
+   */
+  cargarDistractoresBackend(): void {
+    this.api.list({ origen: 'all' }).subscribe({
+      next: (lista) => {
+        // Resetear DB a los globales hardcodeados
+        this.DB = [
+          // Redes sociales
+          { nombre: 'Facebook',   url: 'facebook.com',   categoria: 'red_social',  origen: 'global' },
+          { nombre: 'Instagram',  url: 'instagram.com',  categoria: 'red_social',  origen: 'global' },
+          { nombre: 'Twitter/X',  url: 'twitter.com',    categoria: 'red_social',  origen: 'global' },
+          { nombre: 'Twitter/X',  url: 'x.com',          categoria: 'red_social',  origen: 'global' },
+          { nombre: 'TikTok',     url: 'tiktok.com',     categoria: 'red_social',  origen: 'global' },
+          { nombre: 'Snapchat',   url: 'snapchat.com',   categoria: 'red_social',  origen: 'global' },
+          { nombre: 'Reddit',     url: 'reddit.com',     categoria: 'red_social',  origen: 'global' },
+          { nombre: 'Pinterest',  url: 'pinterest.com',  categoria: 'red_social',  origen: 'global' },
+          { nombre: 'LinkedIn',   url: 'linkedin.com',   categoria: 'red_social',  origen: 'global' },
+          // Streaming
+          { nombre: 'YouTube',    url: 'youtube.com',    categoria: 'streaming',   origen: 'global' },
+          { nombre: 'Netflix',    url: 'netflix.com',    categoria: 'streaming',   origen: 'global' },
+          { nombre: 'Twitch',     url: 'twitch.tv',      categoria: 'streaming',   origen: 'global' },
+          { nombre: 'Disney+',    url: 'disneyplus.com', categoria: 'streaming',   origen: 'global' },
+          { nombre: 'HBO Max',    url: 'hbomax.com',     categoria: 'streaming',   origen: 'global' },
+          { nombre: 'Spotify',    url: 'spotify.com',    categoria: 'streaming',   origen: 'global' },
+          { nombre: 'Prime Video',url: 'primevideo.com', categoria: 'streaming',   origen: 'global' },
+          // Videojuegos
+          { nombre: 'Steam',      url: 'store.steampowered.com', categoria: 'videojuego', origen: 'global' },
+          { nombre: 'Epic Games', url: 'epicgames.com',  categoria: 'videojuego',  origen: 'global' },
+          { nombre: 'Roblox',     url: 'roblox.com',     categoria: 'videojuego',  origen: 'global' },
+          { nombre: 'Miniclip',   url: 'miniclip.com',   categoria: 'videojuego',  origen: 'global' },
+          // Otro
+          { nombre: 'WhatsApp Web', url: 'web.whatsapp.com', categoria: 'otro',   origen: 'global' },
+          { nombre: 'Telegram',   url: 'web.telegram.org', categoria: 'otro',     origen: 'global' },
+          { nombre: 'BuzzFeed',   url: 'buzzfeed.com',   categoria: 'otro',       origen: 'global' },
+        ];
+
+        // Agregar distractores del backend (solo tipo='url', ignorar procesos en web)
+        lista
+          .filter(d => d.tipo === 'url')
+          .forEach(d => {
+            this.DB.push({
+              nombre: d.nombre,
+              url: d.identificador,
+              categoria: d.categoria,
+              origen: d.origen
+            });
+          });
+      },
+      error: (e) => {
+        console.error('Error cargando distractores desde backend:', e);
+      }
+    });
+  }
+
+  /**
+   * Prueba si una URL coincide con algún distractor en la DB.
+   * Retorna el match encontrado y la acción que se ejecutaría.
+   * Útil para testing en la página de distractores.
+   */
+  probarUrl(rawUrl: string): { match: DistractorEntry | null; accionProyectada: string | null } {
+    let hostname = '';
+    try {
+      const candidate = /^[a-z]+:\/\//i.test(rawUrl) ? rawUrl : 'http://' + rawUrl;
+      hostname = new URL(candidate).hostname.replace(/^www\./, '');
+    } catch {
+      return { match: null, accionProyectada: null };
+    }
+
+    const match = this.DB.find(d => d.url && hostname.includes(d.url.replace(/^www\./, '')));
+    if (!match) {
+      return { match: null, accionProyectada: null };
+    }
+
+    const nivel = this.getNivelRestriccion();
+    let accion: string;
+    if (nivel === 'bajo') {
+      accion = 'silencio (solo registro)';
+    } else if (nivel === 'intermedio') {
+      accion = 'toast (notificación)';
+    } else {
+      accion = 'bloqueo (redireccionado a blocked.html)';
+    }
+
+    return { match, accionProyectada: accion };
   }
 
   // ─── Detección manual (para llamar desde extensión de Chrome o desde la app) ──

@@ -19,12 +19,12 @@
           Concentración absoluta
         </button>
         <button
-          (click)="seleccionarModo('alerta')"
+          (click)="seleccionarModo('moderado')"
           class="px-6 py-3 rounded-full text-sm font-semibold border-none cursor-pointer transition-all"
-          [class]="preferencias().modo === 'alerta'
+          [class]="preferencias().modo === 'moderado'
             ? 'bg-[#7c3aed] text-white shadow-[0_4px_12px_rgba(124,58,237,0.35)] scale-105'
             : 'bg-[#ede9fe] text-[#6d28d9] hover:bg-[#ddd6fe]'">
-          Alerta
+          Moderado
         </button>
         <button
           (click)="seleccionarModo('tranquilo')"
@@ -65,10 +65,10 @@
       </button>
 
       @if (mostrarCompletado()) {
-        <p class="mt-4 text-sm font-semibold text-[#059669]">✅ Preferencias guardadas correctamente</p>
+        <p class="mt-4 text-sm font-semibold text-[#059669]">Preferencias guardadas correctamente</p>
       }
       @if (mostrarSesionActiva()) {
-        <p class="mt-4 text-sm font-semibold text-[#7c3aed] bg-[#f5f3ff] border border-[#ddd6fe] rounded-xl px-4 py-2.5">✅ Guardado — Sesión en curso no interrumpida</p>
+        <p class="mt-4 text-sm font-semibold text-[#7c3aed] bg-[#f5f3ff] border border-[#ddd6fe] rounded-xl px-4 py-2.5">Guardado — Sesión en curso no interrumpida</p>
       }
     </div>
 
